@@ -5,6 +5,7 @@ import { useGame } from '../hooks/useGame'
 import { ActionsModal } from '../components/ActionsModal'
 import { OutcomeDialog } from '../components/OutcomeDialog'
 import { EndHandDialog } from '../components/EndHandDialog'
+import { TimelineModal } from '../components/TimelineModal'
 import { canSideShow } from '../engine/playerActionEngine'
 import {
   countActivePlayers,
@@ -18,11 +19,11 @@ const STATUS_LABELS: Record<PlayerStatus, string> = {
   out: 'Eliminated',
 }
 
-type Dialog = 'none' | 'confirm-hand' | 'actions' | 'side-show' | 'show'
+type Dialog = 'none' | 'confirm-hand' | 'actions' | 'side-show' | 'show' | 'confirm-undo' | 'timeline'
 
 export default function Game() {
   const navigate = useNavigate()
-  const { game, startNewHand, dispatchAction } = useGame()
+  const { game, startNewHand, dispatchAction, undo, canUndo } = useGame()
   const [dialog, setDialog] = useState<Dialog>('none')
   const [endHandDismissed, setEndHandDismissed] = useState(false)
 
@@ -83,6 +84,12 @@ export default function Game() {
   const handleShowResult = (winnerId: string) => {
     if (!activePlayer) return
     dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
+    closeDialog()
+  }
+
+  const handleUndo = () => {
+    undo()
+    setEndHandDismissed(false)
     closeDialog()
   }
 
@@ -214,8 +221,20 @@ export default function Game() {
         >
           New Hand
         </button>
-        <button type="button" className="btn" disabled>
-          History
+        <button
+          type="button"
+          className="btn"
+          disabled={!canUndo}
+          onClick={() => setDialog('confirm-undo')}
+        >
+          Undo
+        </button>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => setDialog('timeline')}
+        >
+          Timeline
         </button>
         <button type="button" className="btn" disabled>
           Settings
@@ -247,6 +266,39 @@ export default function Game() {
                 onClick={handleStartHand}
               >
                 Start
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialog === 'confirm-undo' && (
+        <div
+          className="modal-overlay"
+          onClick={closeDialog}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="modal__title">Undo Last Action?</h2>
+            <p className="subtitle">
+              This will restore the game to the previous state.
+            </p>
+
+            <div className="modal__actions">
+              <button type="button" className="btn" onClick={closeDialog}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleUndo}
+              >
+                Undo
               </button>
             </div>
           </div>
@@ -299,6 +351,10 @@ export default function Game() {
           onSelect={handleShowResult}
           onCancel={() => setDialog('actions')}
         />
+      )}
+
+      {dialog === 'timeline' && (
+        <TimelineModal onClose={closeDialog} />
       )}
 
       {game.handComplete && !endHandDismissed && (

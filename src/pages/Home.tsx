@@ -29,9 +29,13 @@ export const Home: React.FC = () => {
             <span className="button-text">Continue</span>
           </button>
 
-          <button className="button" type="button" disabled>
+          <button
+            className="button"
+            type="button"
+            onClick={() => navigate('/history')}
+          >
             <span className="button-icon" aria-hidden="true">📊</span>
-            <span className="button-text">Statistics</span>
+            <span className="button-text">History</span>
           </button>
 
           <button

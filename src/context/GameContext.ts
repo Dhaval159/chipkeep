@@ -8,6 +8,9 @@ export interface GameContextValue {
   nextPlayer: () => void
   dispatchAction: (action: PlayerAction) => void
   resetGame: () => void
+  restoreGame: (state: GameState) => void
+  undo: () => void
+  canUndo: boolean
 }
 
 export const initialGameState: GameState = {

@@ -618,7 +618,7 @@ html, body {
 
 .game-action-bar {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.75rem;
   width: 100%;
   margin-top: 0.5rem;
@@ -626,6 +626,141 @@ html, body {
 
 .game-action-bar .btn {
   padding: 0.85rem 0.5rem;
+}
+
+/* Timeline Modal */
+.modal--timeline {
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeline-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.timeline-event {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-event:last-child {
+  border-bottom: none;
+}
+
+.timeline-event__time {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 4rem;
+  padding-top: 0.1rem;
+}
+
+.timeline-event__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-event__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.timeline-event__hand {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: var(--background-tertiary);
+  color: var(--muted-foreground);
+}
+
+.timeline-event__player {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+}
+
+.timeline-event__type {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.timeline-event__type--bet { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.timeline-event__type--pack { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
+.timeline-event__type--see_cards { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.timeline-event__type--side_show { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+.timeline-event__type--show { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.timeline-event__type--winner { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+.timeline-event__type--new_hand { background: rgba(148, 163, 184, 0.12); color: var(--muted-foreground); }
+.timeline-event__type--game_started { background: rgba(148, 163, 184, 0.12); color: var(--muted-foreground); }
+.timeline-event__type--undo { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+
+.timeline-event__desc {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* History Detail */
+.history-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.history-detail__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--card-foreground);
+  margin: 0;
+}
+
+.history-detail__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-detail__row:last-child {
+  border-bottom: none;
+}
+
+.history-detail__label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.history-detail__value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--card-foreground);
+  text-align: right;
 }
 
 /* Utilities */

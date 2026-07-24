@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Player } from '../types/game'
 import { useGame } from '../hooks/useGame'
+import { hasSavedGame, clearSavedGame } from '../utils/storage'
 
 const CHIP_OPTIONS = [
   { value: '1000', label: '1,000' },
@@ -24,6 +25,7 @@ export default function CreateGame() {
   const [modalOpen, setModalOpen] = useState(false)
   const [playerName, setPlayerName] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
+  const [confirmNewGame, setConfirmNewGame] = useState(false)
 
   const openModal = () => {
     setPlayerName('')
@@ -61,6 +63,23 @@ export default function CreateGame() {
     setPlayers((prev) => prev.filter((_, i) => i !== index))
   }
 
+  const doStartGame = () => {
+    const resolvedChips =
+      startingChips === 'custom' ? Number(customChips) : Number(startingChips)
+
+    const gamePlayers: Player[] = players.map((name, index) => ({
+      id: `${index}-${name}`,
+      name,
+      chips: resolvedChips,
+      status: 'waiting',
+      seen: false,
+    }))
+
+    clearSavedGame()
+    startGame({ players: gamePlayers, startingChips: resolvedChips })
+    navigate('/game')
+  }
+
   const handleStartGame = () => {
     if (players.length < 2) {
       return
@@ -73,16 +92,12 @@ export default function CreateGame() {
       return
     }
 
-    const gamePlayers: Player[] = players.map((name, index) => ({
-      id: `${index}-${name}`,
-      name,
-      chips: resolvedChips,
-      status: 'waiting',
-      seen: false,
-    }))
+    if (hasSavedGame()) {
+      setConfirmNewGame(true)
+      return
+    }
 
-    startGame({ players: gamePlayers, startingChips: resolvedChips })
-    navigate('/game')
+    doStartGame()
   }
 
   return (
@@ -207,6 +222,46 @@ export default function CreateGame() {
                 onClick={handleAddPlayer}
               >
                 Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmNewGame && (
+        <div
+          className="modal-overlay"
+          onClick={() => setConfirmNewGame(false)}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="modal__title">Start New Game?</h2>
+            <p className="subtitle">
+              Starting a new game will erase the previous saved game.
+            </p>
+
+            <div className="modal__actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setConfirmNewGame(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setConfirmNewGame(false)
+                  doStartGame()
+                }}
+              >
+                Start
               </button>
             </div>
           </div>
