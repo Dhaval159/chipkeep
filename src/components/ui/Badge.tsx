@@ -1,4 +1,4 @@
-type BadgeVariant = 'blind' | 'seen' | 'winner' | 'dealer' | 'packed' | 'active-turn'
+type BadgeVariant = 'blind' | 'seen' | 'winner' | 'dealer' | 'packed' | 'active-turn' | 'host'
 
 interface BadgeProps {
   variant: BadgeVariant
@@ -13,6 +13,7 @@ const VARIANT_LABELS: Record<BadgeVariant, string> = {
   'dealer': 'Dealer',
   'packed': 'Packed',
   'active-turn': 'Active Turn',
+  'host': 'Host',
 }
 
 export function Badge({ variant, children, className = '' }: BadgeProps) {

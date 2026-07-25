@@ -4,10 +4,13 @@ import { useGame } from '../hooks/useGame'
 import { hasSavedGame, loadGame } from '../utils/storage'
 import { Button } from '../components/ui/Button'
 import { Dialog } from '../components/ui/Dialog'
+import { useMultiplayer } from '../hooks/useMultiplayer'
+import { Users } from 'lucide-react'
 
 export const Home: React.FC = () => {
   const navigate = useNavigate()
   const { restoreGame } = useGame()
+  const { authLoading } = useMultiplayer()
   const [showConfirm, setShowConfirm] = useState(false)
   const savedGameExists = hasSavedGame()
 
@@ -35,15 +38,46 @@ export const Home: React.FC = () => {
           <p className="home-tagline">Your Table. Your Chips. Zero Confusion.</p>
         </div>
 
-        <div className="home-actions">
-          {savedGameExists && (
-            <Button variant="primary" fullWidth onClick={handleResume}>
-              Resume Game
+        <div className="home-section">
+          <h2 className="home-section__title">Single Device</h2>
+          <div className="home-actions">
+            {savedGameExists && (
+              <Button variant="primary" fullWidth onClick={handleResume}>
+                Resume Game
+              </Button>
+            )}
+            <Button variant="primary" fullWidth onClick={handleNewGame}>
+              New Game
             </Button>
-          )}
-          <Button variant="primary" fullWidth onClick={handleNewGame}>
-            New Game
-          </Button>
+          </div>
+        </div>
+
+        <div className="home-section">
+          <h2 className="home-section__title">
+            <Users size={20} />
+            Multiplayer
+          </h2>
+          <div className="home-actions">
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => navigate('/create-room')}
+              disabled={authLoading}
+            >
+              Create Room
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => navigate('/join-room')}
+              disabled={authLoading}
+            >
+              Join Room
+            </Button>
+          </div>
+        </div>
+
+        <div className="home-actions">
           <Button variant="secondary" fullWidth onClick={() => navigate('/history')}>
             History
           </Button>

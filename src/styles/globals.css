@@ -2965,3 +2965,352 @@ html, body {
 .endhand-bottom-bar__text:hover {
   color: var(--muted-foreground);
 }
+
+/* ============================================================
+   Host Badge
+   ============================================================ */
+.ck-badge--host {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+/* ============================================================
+   Multiplayer Room Pages (Create / Join)
+   ============================================================ */
+
+.room-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  margin-top: var(--space-8);
+}
+
+.room-error {
+  font-size: var(--font-size-caption);
+  color: var(--danger);
+  text-align: center;
+  margin: 0;
+}
+
+.room-code-input .ck-text-field__input {
+  font-size: var(--font-size-section);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 16px;
+}
+
+/* ============================================================
+   Lobby Page
+   ============================================================ */
+
+.lobby-page {
+  width: 100%;
+  max-width: 375px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+  animation: ck-fade-in var(--animation-duration) var(--animation-easing);
+}
+
+.lobby-loading,
+.lobby-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+  padding: var(--space-48) var(--space-16);
+  text-align: center;
+  color: var(--muted);
+}
+
+.lobby-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-24);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-md);
+}
+
+.lobby-room-code-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.lobby-room-code-label {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lobby-room-code-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.lobby-room-code {
+  font-size: 36px;
+  font-weight: var(--font-weight-bold);
+  color: var(--card-foreground);
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lobby-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--background-secondary);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all var(--animation-duration) var(--animation-easing);
+}
+
+.lobby-copy-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.lobby-copy-btn:active {
+  transform: scale(0.95);
+}
+
+.lobby-copied-text {
+  font-size: var(--font-size-small);
+  color: var(--success);
+  font-weight: var(--font-weight-medium);
+}
+
+.lobby-status-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+}
+
+.lobby-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-4) var(--space-12);
+  border-radius: 999px;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semi);
+  line-height: 1.4;
+}
+
+.lobby-status-badge--waiting {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+}
+
+.lobby-player-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-caption);
+  color: var(--muted);
+}
+
+/* ── Player List ── */
+
+.lobby-players-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.lobby-players-title {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semi);
+  color: var(--card-foreground);
+  margin: 0;
+}
+
+.lobby-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.lobby-player-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--animation-duration) var(--animation-easing);
+  animation: ck-slide-in var(--animation-duration) var(--animation-easing);
+}
+
+.lobby-player-card--disconnected {
+  opacity: 0.55;
+}
+
+.lobby-player-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-player-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.lobby-player-card__name {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semi);
+  color: var(--card-foreground);
+}
+
+.lobby-player-card__host-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--warning);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+.lobby-player-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.lobby-player-card__status {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+}
+
+.lobby-player-card__status--online {
+  color: var(--success);
+}
+
+.lobby-player-card__status--offline {
+  color: var(--muted);
+}
+
+.lobby-player-card__you {
+  font-size: 10px;
+  font-weight: var(--font-weight-semi);
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.12);
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.lobby-player-card__status-dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.lobby-player-card__status-dot--online {
+  background: var(--success);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.lobby-player-card__status-dot--offline {
+  background: var(--text-disabled);
+}
+
+/* ── Actions ── */
+
+.lobby-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.lobby-waiting-host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+
+.lobby-waiting-host p {
+  font-size: var(--font-size-caption);
+  color: var(--muted);
+  margin: 0;
+  text-align: center;
+}
+
+.lobby-game-started {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--radius-card);
+}
+
+.lobby-game-started p {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semi);
+  color: var(--success);
+  margin: 0;
+  text-align: center;
+}
+
+/* ============================================================
+   Home – Multiplayer Section
+   ============================================================ */
+
+.home-section {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.home-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semi);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
