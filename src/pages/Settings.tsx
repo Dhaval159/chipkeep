@@ -1,21 +1,21 @@
 import { useNavigate } from 'react-router-dom'
+import { Button } from '../components/ui/Button'
+import { SectionHeader } from '../components/ui/SectionHeader'
 
 export default function Settings() {
   const navigate = useNavigate()
 
   return (
     <div className="home-container">
-      <header className="header">
-        <h1 className="logo">ChipKeep</h1>
-      </header>
+      <SectionHeader title="ChipKeep" />
 
-      <button
-        type="button"
-        className="back-button"
+      <Button
+        variant="secondary"
         onClick={() => navigate('/')}
+        style={{ alignSelf: 'flex-start' }}
       >
         ← Back
-      </button>
+      </Button>
 
       <p className="subtitle">Settings — coming soon.</p>
     </div>

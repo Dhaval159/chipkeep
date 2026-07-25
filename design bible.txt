@@ -1,0 +1,786 @@
+
+
+# ChipKeep Design Bible v1.0
+
+## Product Vision
+
+ChipKeep is a **premium companion app for real-life Teen Patti games**.
+
+It is **not** an online casino.
+
+It is **not** a gambling app.
+
+It is a **table management tool** that helps friends track chips, turns, pots, betting, and game history while playing together.
+
+The app should feel closer to **Linear, Google Wallet, Revolut, and Notion** than to flashy casino games.
+
+---
+
+# Design Philosophy
+
+Three principles guide every screen:
+
+### 1. Fast
+
+The host should complete almost every action within **two taps**.
+
+Never bury frequently used actions.
+
+---
+
+### 2. Clear
+
+Users should immediately know:
+
+* whose turn it is
+* current pot
+* current stake
+* active players
+* available actions
+
+No guessing.
+
+---
+
+### 3. Premium
+
+Minimal.
+
+Elegant.
+
+High quality.
+
+No unnecessary decoration.
+
+No visual noise.
+
+---
+
+# Visual Identity
+
+## Theme
+
+Dark Mode First
+
+ChipKeep is designed primarily for indoor evening games.
+
+Dark UI is easier on the eyes during long sessions.
+
+---
+
+## Design Inspiration
+
+Primary inspiration
+
+* Linear
+* Google Wallet
+* Material Design 3
+* Apple Human Interface Guidelines
+* Revolut
+
+Secondary inspiration
+
+* Notion
+* Arc Browser
+* Chess.com
+* PokerStars (layout only, not styling)
+
+---
+
+# Brand Personality
+
+ChipKeep should feel:
+
+✓ Reliable
+
+✓ Modern
+
+✓ Smart
+
+✓ Friendly
+
+✓ Efficient
+
+Never feel
+
+✗ Flashy
+
+✗ Loud
+
+✗ Cheap
+
+✗ Cartoonish
+
+✗ Casino-like
+
+---
+
+# Color System
+
+## Background
+
+```
+Primary Background
+
+#0B1020
+```
+
+---
+
+## Elevated Surface
+
+```
+#171C26
+```
+
+---
+
+## Secondary Surface
+
+```
+#1E2432
+```
+
+---
+
+## Primary Accent
+
+```
+#2563EB
+```
+
+Used for
+
+* Primary buttons
+* Active turn
+* Links
+* Selection
+
+---
+
+## Success
+
+```
+#10B981
+```
+
+Used for
+
+* Winner
+* Confirmations
+* Positive actions
+
+---
+
+## Warning
+
+```
+#F59E0B
+```
+
+Used for
+
+* Side Show
+* Blind → Seen
+* Important alerts
+
+---
+
+## Danger
+
+```
+#EF4444
+```
+
+Used for
+
+* Pack
+* Delete
+* Reset
+* Dangerous confirmations
+
+---
+
+## Text
+
+Primary
+
+```
+#FFFFFF
+```
+
+Secondary
+
+```
+#94A3B8
+```
+
+Disabled
+
+```
+#64748B
+```
+
+---
+
+# Typography
+
+## App Title
+
+32 px
+
+Bold
+
+---
+
+## Section Title
+
+24 px
+
+SemiBold
+
+---
+
+## Card Title
+
+20 px
+
+Medium
+
+---
+
+## Body
+
+16 px
+
+Regular
+
+---
+
+## Caption
+
+14 px
+
+Regular
+
+---
+
+## Small Labels
+
+12 px
+
+Medium
+
+---
+
+# Border Radius
+
+Buttons
+
+```
+18 px
+```
+
+Cards
+
+```
+20 px
+```
+
+Dialogs
+
+```
+24 px
+```
+
+Bottom Sheets
+
+```
+28 px
+```
+
+Never use sharp corners.
+
+---
+
+# Spacing System
+
+Use an **8-point grid**.
+
+Allowed spacing values only:
+
+```
+4
+8
+16
+24
+32
+40
+48
+64
+```
+
+Avoid arbitrary values like 13px or 19px.
+
+---
+
+# Shadows
+
+Very subtle.
+
+Cards should appear elevated, not floating dramatically.
+
+No harsh shadows.
+
+---
+
+# Icons
+
+Only use **Lucide React** icons.
+
+Outlined icons.
+
+24 px standard.
+
+No emojis in the UI.
+
+---
+
+# Buttons
+
+## Primary
+
+Filled
+
+Blue background
+
+White text
+
+Rounded
+
+Height
+
+56 px
+
+---
+
+## Secondary
+
+Outlined
+
+Transparent background
+
+Blue border
+
+---
+
+## Destructive
+
+Red
+
+Only for irreversible actions.
+
+---
+
+## Floating Action Button
+
+Large circular button.
+
+Bottom-right placement only if it truly improves usability.
+
+Otherwise prefer a bottom action bar.
+
+---
+
+# Cards
+
+Every card should contain
+
+```
+Padding
+
+24 px
+```
+
+Rounded corners
+
+Subtle shadow
+
+Clear hierarchy
+
+---
+
+# Player Card
+
+Every player card always contains:
+
+Avatar
+
+Player Name
+
+Chip Count
+
+Blind / Seen Badge
+
+Current Status
+
+Dealer Badge (if applicable)
+
+Turn Indicator
+
+Packed players
+
+Opacity 50%
+
+Winner
+
+Gold outline
+
+Current Turn
+
+Blue glow
+
+---
+
+# Pot Card
+
+Always centered.
+
+Contains:
+
+Current Pot
+
+Current Stake
+
+Current Hand
+
+Dealer
+
+This is the visual focus of the Game Table.
+
+---
+
+# Action Bottom Sheet
+
+Actions always appear in this order:
+
+1. Bet
+2. Pack
+3. Side Show
+4. Show
+5. See Cards
+6. Undo
+
+Each action includes
+
+Icon
+
+Title
+
+Description
+
+Never use icon-only actions.
+
+---
+
+# Dialogs
+
+Custom dialogs only.
+
+Never use browser alerts.
+
+Dialogs always include
+
+Title
+
+Description
+
+Primary Button
+
+Secondary Button
+
+Rounded corners
+
+Blurred backdrop
+
+---
+
+# Animations
+
+Duration
+
+```
+180–220 ms
+```
+
+Use easing
+
+```
+ease-out
+```
+
+Animations include
+
+Button press
+
+Card elevation
+
+Bottom sheet
+
+Dialogs
+
+Winner screen
+
+Never over-animate.
+
+---
+
+# Navigation
+
+Top App Bar
+
+Always present.
+
+Contains
+
+Back
+
+Title
+
+Optional actions
+
+Bottom Navigation
+
+Only for
+
+History
+
+Settings
+
+Statistics
+
+Never exceed five items.
+
+---
+
+# Home Screen
+
+Hierarchy
+
+Logo
+
+↓
+
+App Name
+
+↓
+
+Tagline
+
+↓
+
+Resume Game (if available)
+
+↓
+
+New Game
+
+↓
+
+History
+
+↓
+
+Settings
+
+↓
+
+Version
+
+---
+
+# Create Game
+
+Focus on speed.
+
+No unnecessary forms.
+
+Defaults should reduce typing.
+
+---
+
+# Game Table
+
+Most important screen.
+
+Center
+
+Pot Card
+
+Around the pot
+
+Player Cards arranged like a circular table.
+
+Bottom
+
+Action Bar
+
+Current player should always be visually obvious.
+
+---
+
+# Winner Screen
+
+Celebrate without looking like a casino.
+
+Winner card
+
+↓
+
+Player standings
+
+↓
+
+Start Next Hand
+
+↓
+
+Return to Table
+
+No confetti.
+
+No fireworks.
+
+No flashy effects.
+
+---
+
+# History
+
+Newest first.
+
+Every hand displayed as a clean card.
+
+Information
+
+Winner
+
+Pot
+
+Duration
+
+Tap to expand.
+
+---
+
+# Accessibility
+
+Minimum touch target
+
+```
+48 × 48 dp
+```
+
+Prefer
+
+```
+56 dp
+```
+
+Maintain high color contrast.
+
+Support dynamic font scaling.
+
+Never rely on color alone to convey state.
+
+---
+
+# Responsive Rules
+
+Support:
+
+* Small Android phones
+* Large Android phones
+* Tablets (future)
+
+Never allow horizontal scrolling.
+
+Content should adapt vertically.
+
+---
+
+# Performance Goals
+
+Screen transitions under **200 ms**.
+
+No animation should block gameplay.
+
+Interactions should feel immediate.
+
+---
+
+# Code Guidelines for UI
+
+Every new component should be reusable.
+
+Examples:
+
+```
+<PlayerCard />
+
+<PotCard />
+
+<ActionButton />
+
+<GameDialog />
+
+<BottomActionSheet />
+
+<ChipCounter />
+
+<SectionHeader />
+```
+
+Avoid duplicate UI code.
+
+---
+
+# AI Implementation Rules
+
+Every coding model (Claude, DeepSeek, OpenCode, etc.) should follow these rules:
+
+* Do **not** redesign approved screens.
+* Recreate the approved mockups as accurately as possible.
+* Reuse existing components instead of creating duplicates.
+* Follow the spacing, typography, color, and animation rules in this Design Bible.
+* Prefer composition over large monolithic components.
+* Keep business logic separate from UI.
+* Prioritize mobile-first layouts.
+* Test UI changes before considering the task complete.
+
+---
+
+# Product Quality Checklist
+
+Before any feature is considered complete:
+
+* ✅ Matches the approved mockup.
+* ✅ Follows the Design Bible.
+* ✅ Responsive on common Android screen sizes.
+* ✅ No layout overflow.
+* ✅ Touch targets are comfortable.
+* ✅ Typography is consistent.
+* ✅ Animations are smooth and subtle.
+* ✅ No browser-default dialogs.
+* ✅ No TypeScript or runtime errors.
+* ✅ Maintains a premium, modern feel.
+
+---
+
+## Future Design Principles
+
+As ChipKeep grows (multiplayer, tournaments, statistics, Android app), every new screen should answer one question:
+
+> **"Would this screen feel at home in a polished productivity app like Linear or Google Wallet?"**
+
+If the answer is **yes**, it belongs in ChipKeep. If it feels like a flashy casino interface or a cluttered utility, it should be redesigned. This principle will help keep the app consistent even as it gains new features.

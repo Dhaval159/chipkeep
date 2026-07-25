@@ -1,4 +1,5 @@
 import type { Player } from '../types/game'
+import { Button } from './ui/Button'
 
 interface EndHandDialogProps {
   winner: Player | null
@@ -38,16 +39,12 @@ export function EndHandDialog({
         </div>
 
         <div className="modal__actions">
-          <button type="button" className="btn" onClick={onReturn}>
+          <Button variant="secondary" onClick={onReturn}>
             Return to Game
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={onNextHand}
-          >
+          </Button>
+          <Button variant="primary" onClick={onNextHand}>
             Start Next Hand
-          </button>
+          </Button>
         </div>
       </div>
     </div>

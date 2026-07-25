@@ -1,4 +1,5 @@
 import type { Player } from '../types/game'
+import { Button } from './ui/Button'
 
 interface OutcomeDialogProps {
   title: string
@@ -35,18 +36,18 @@ export function OutcomeDialog({
 
         <div className="bet-actions">
           {options.map((player) => (
-            <button
-              type="button"
+            <Button
               key={player.id}
-              className="btn btn-primary btn-full"
+              variant="primary"
+              fullWidth
               onClick={() => onSelect(player.id)}
             >
               {optionLabel(player)}
-            </button>
+            </Button>
           ))}
-          <button type="button" className="btn btn-full" onClick={onCancel}>
+          <Button variant="secondary" fullWidth onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

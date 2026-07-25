@@ -1,4 +1,5 @@
 import { timeline } from '../utils/timeline'
+import { Button } from './ui/Button'
 
 interface TimelineModalProps {
   onClose: () => void
@@ -53,9 +54,9 @@ export function TimelineModal({ onClose }: TimelineModalProps) {
         </div>
 
         <div className="modal__actions">
-          <button type="button" className="btn btn-primary btn-full" onClick={onClose}>
+          <Button variant="primary" fullWidth onClick={onClose}>
             Close
-          </button>
+          </Button>
         </div>
       </div>
     </div>

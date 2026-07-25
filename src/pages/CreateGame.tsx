@@ -3,13 +3,25 @@ import { useNavigate } from 'react-router-dom'
 import type { Player } from '../types/game'
 import { useGame } from '../hooks/useGame'
 import { hasSavedGame, clearSavedGame } from '../utils/storage'
+import { Button } from '../components/ui/Button'
+import { TextField } from '../components/ui/TextField'
+import { Dialog } from '../components/ui/Dialog'
+import { SectionHeader } from '../components/ui/SectionHeader'
+import { Avatar } from '../components/ui/Avatar'
 
-const CHIP_OPTIONS = [
-  { value: '1000', label: '1,000' },
-  { value: '5000', label: '5,000' },
-  { value: '10000', label: '10,000' },
-  { value: '25000', label: '25,000' },
-  { value: '50000', label: '50,000' },
+const STARTING_CHIPS_PRESETS = [
+  { value: '5000', label: '₹5,000' },
+  { value: '10000', label: '₹10,000' },
+  { value: '20000', label: '₹20,000' },
+  { value: '50000', label: '₹50,000' },
+  { value: 'custom', label: 'Custom' },
+]
+
+const BOOT_AMOUNT_PRESETS = [
+  { value: '10', label: '₹10' },
+  { value: '20', label: '₹20' },
+  { value: '50', label: '₹50' },
+  { value: '100', label: '₹100' },
   { value: 'custom', label: 'Custom' },
 ]
 
@@ -20,12 +32,16 @@ export default function CreateGame() {
   const { startGame } = useGame()
 
   const [players, setPlayers] = useState<string[]>([])
-  const [startingChips, setStartingChips] = useState<string>('1000')
+  const [startingChips, setStartingChips] = useState<string>('10000')
   const [customChips, setCustomChips] = useState<string>('')
+  const [bootAmount, setBootAmount] = useState<string>('20')
+  const [customBoot, setCustomBoot] = useState<string>('')
   const [modalOpen, setModalOpen] = useState(false)
   const [playerName, setPlayerName] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
   const [confirmNewGame, setConfirmNewGame] = useState(false)
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null)
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<number>>(new Set())
 
   const openModal = () => {
     setPlayerName('')
@@ -55,12 +71,28 @@ export default function CreateGame() {
       return
     }
 
-    setPlayers((prev) => [...prev, trimmed])
+    setPlayers((prev) => {
+      const next = [...prev, trimmed]
+      setRecentlyAdded((s) => new Set(s).add(next.length - 1))
+      // Clear the animation flag after the slide-in completes
+      setTimeout(() => {
+        setRecentlyAdded((s) => {
+          const next2 = new Set(s)
+          next2.delete(next.length - 1)
+          return next2
+        })
+      }, 250)
+      return next
+    })
     closeModal()
   }
 
   const handleDeletePlayer = (index: number) => {
-    setPlayers((prev) => prev.filter((_, i) => i !== index))
+    setRemovingIndex(index)
+    setTimeout(() => {
+      setPlayers((prev) => prev.filter((_, i) => i !== index))
+      setRemovingIndex(null)
+    }, 150)
   }
 
   const doStartGame = () => {
@@ -102,171 +134,204 @@ export default function CreateGame() {
 
   return (
     <div className="home-container">
-      <button
-        type="button"
-        className="back-button"
+      <Button
+        variant="secondary"
         onClick={() => navigate('/')}
+        className="ck-self-start"
       >
         ← Back
-      </button>
+      </Button>
 
-      <header className="header" style={{ marginTop: 0, textAlign: 'left' }}>
-        <h1 className="logo">Create Game</h1>
-        <p className="subtitle">Set up your table</p>
-      </header>
+      <SectionHeader title="Create Game" subtitle="Set up your table" />
 
-      <div className="field-group">
-        <label className="field-label" htmlFor="startingChips">
+      {/* ── Game Settings ── */}
+      <SectionHeader title="Game Settings" />
+
+      {/* Starting Chips */}
+      <div className="ck-full-width">
+        <span className="ck-chip-preset-label" id="starting-chips-label">
           Starting Chips
-        </label>
-        <select
-          id="startingChips"
-          className="select"
-          value={startingChips}
-          onChange={(e) => setStartingChips(e.target.value)}
-        >
-          {CHIP_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+        </span>
+        <div className="ck-chip-presets" role="group" aria-labelledby="starting-chips-label">
+          {STARTING_CHIPS_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              className={`ck-chip-preset${startingChips === preset.value ? ' ck-chip-preset--active' : ''}`}
+              aria-pressed={startingChips === preset.value}
+              onClick={() => setStartingChips(preset.value)}
+            >
+              {preset.label}
+            </button>
           ))}
-        </select>
+        </div>
+        {startingChips === 'custom' && (
+          <div className="ck-mt-sm">
+            <TextField
+              label="Custom Amount"
+              type="number"
+              min="1"
+              value={customChips}
+              onChange={(e) => setCustomChips(e.target.value)}
+              placeholder="Enter amount"
+            />
+          </div>
+        )}
       </div>
 
-      {startingChips === 'custom' && (
-        <div className="field-group">
-          <label className="field-label" htmlFor="customChips">
-            Custom Amount
-          </label>
-          <input
-            id="customChips"
-            type="number"
-            min="1"
-            className="input"
-            value={customChips}
-            onChange={(e) => setCustomChips(e.target.value)}
-            placeholder="Enter amount"
-          />
+      {/* Boot Amount */}
+      <div className="ck-full-width">
+        <span className="ck-chip-preset-label" id="boot-amount-label">
+          Boot Amount
+        </span>
+        <div className="ck-chip-presets" role="group" aria-labelledby="boot-amount-label">
+          {BOOT_AMOUNT_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              type="button"
+              className={`ck-chip-preset${bootAmount === preset.value ? ' ck-chip-preset--active' : ''}`}
+              aria-pressed={bootAmount === preset.value}
+              onClick={() => setBootAmount(preset.value)}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
-      )}
+        {bootAmount === 'custom' && (
+          <div className="ck-mt-sm">
+            <TextField
+              label="Custom Boot"
+              type="number"
+              min="1"
+              value={customBoot}
+              onChange={(e) => setCustomBoot(e.target.value)}
+              placeholder="Enter amount"
+            />
+          </div>
+        )}
+        <p className="ck-chip-helper">
+          Every player contributes this amount at the beginning of each hand.
+        </p>
+      </div>
 
-      <button type="button" className="btn btn-full" onClick={openModal}>
-        Add Player
-      </button>
+      {/* ── Players ── */}
+      <div className="ck-full-width">
+        <SectionHeader title="Players" />
 
-      {players.length > 0 && (
-        <div className="player-list">
+        <div
+          className={
+            players.length === 0
+              ? 'ck-create-players-card ck-create-players-card--empty'
+              : 'ck-create-players-card'
+          }
+          aria-label="Player list"
+        >
+          {players.length === 0 && (
+            <span className="ck-create-empty">
+              No players added yet
+            </span>
+          )}
+
           {players.map((name, index) => (
-            <div className="player-card" key={`${name}-${index}`}>
-              <span className="player-card__name">{name}</span>
+            <div
+              key={`${name}-${index}`}
+              className={`ck-player-card ck-player-card--compact${
+                recentlyAdded.has(index) ? ' ck-player-card--animate' : ''
+              }${
+                removingIndex === index ? ' ck-player-card--removing' : ''
+              }`}
+            >
+              <Avatar name={name} size="sm" />
+              <div className="ck-player-card__info">
+                <span className="ck-player-card__name">{name}</span>
+              </div>
               <button
                 type="button"
-                className="player-card__delete"
+                className="ck-compact-delete"
                 onClick={() => handleDeletePlayer(index)}
-                aria-label={`Delete ${name}`}
+                aria-label={`Remove ${name}`}
               >
-                🗑
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
               </button>
             </div>
           ))}
         </div>
+
+        <div className="ck-mt-sm">
+          <Button variant="secondary" fullWidth onClick={openModal}>
+            + Add Player
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Validation Hint ── */}
+      {players.length > 0 && players.length < 2 && (
+        <p className="ck-validation-hint">
+          Add at least 2 players to create a table
+        </p>
       )}
 
-      <button
-        type="button"
-        className="btn btn-primary btn-full"
-        disabled={players.length < 2}
-        onClick={handleStartGame}
+      {/* ── Sticky Bottom ── */}
+      <div className="ck-create-bottom">
+        <Button
+          variant="primary"
+          fullWidth
+          disabled={players.length < 2}
+          onClick={handleStartGame}
+        >
+          Create Table
+        </Button>
+      </div>
+
+      {/* ── Add Player Dialog ── */}
+      <Dialog
+        open={modalOpen}
+        title="Add Player"
+        primaryLabel="Add"
+        primaryAction={handleAddPlayer}
+        secondaryLabel="Cancel"
+        secondaryAction={closeModal}
+        onClose={closeModal}
       >
-        Start Game
-      </button>
+        <TextField
+          label="Player Name"
+          value={playerName}
+          onChange={(e) => {
+            setPlayerName(e.target.value)
+            setNameError(null)
+          }}
+          placeholder="Enter name"
+          autoFocus
+          error={nameError}
+        />
+      </Dialog>
 
-      {modalOpen && (
-        <div
-          className="modal-overlay"
-          onClick={closeModal}
-          role="presentation"
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <h2 className="modal__title">Add Player</h2>
-
-            <div className="field-group" style={{ margin: 0 }}>
-              <label className="field-label" htmlFor="playerName">
-                Player Name
-              </label>
-              <input
-                id="playerName"
-                type="text"
-                className="input"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Enter name"
-                autoFocus
-              />
-            </div>
-
-            {nameError && <p className="error-text">{nameError}</p>}
-
-            <div className="modal__actions">
-              <button type="button" className="btn" onClick={closeModal}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleAddPlayer}
-              >
-                Add
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {confirmNewGame && (
-        <div
-          className="modal-overlay"
-          onClick={() => setConfirmNewGame(false)}
-          role="presentation"
-        >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <h2 className="modal__title">Start New Game?</h2>
-            <p className="subtitle">
-              Starting a new game will erase the previous saved game.
-            </p>
-
-            <div className="modal__actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setConfirmNewGame(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => {
-                  setConfirmNewGame(false)
-                  doStartGame()
-                }}
-              >
-                Start
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Confirm New Game Dialog ── */}
+      <Dialog
+        open={confirmNewGame}
+        title="Start New Game?"
+        description="Starting a new game will erase the previous saved game."
+        primaryLabel="Start"
+        primaryAction={() => {
+          setConfirmNewGame(false)
+          doStartGame()
+        }}
+        secondaryLabel="Cancel"
+        secondaryAction={() => setConfirmNewGame(false)}
+        onClose={() => setConfirmNewGame(false)}
+      />
     </div>
   )
 }

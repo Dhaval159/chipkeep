@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import { loadGame, clearSavedGame } from '../utils/storage'
+import { Button } from './ui/Button'
+import { Dialog } from './ui/Dialog'
 
 export function LoadGameModal() {
   const navigate = useNavigate()
@@ -29,27 +31,16 @@ export function LoadGameModal() {
     setShow(false)
   }
 
-  if (!show) return null
-
   return (
-    <div className="modal-overlay" role="presentation">
-      <div className="modal" role="dialog" aria-modal="true">
-        <h2 className="modal__title">Continue Previous Game?</h2>
-        <p className="subtitle">A saved game was found.</p>
-
-        <div className="modal__actions">
-          <button type="button" className="btn" onClick={handleDiscard}>
-            Discard
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={handleContinue}
-          >
-            Continue
-          </button>
-        </div>
-      </div>
-    </div>
+    <Dialog
+      open={show}
+      title="Continue Previous Game?"
+      description="A saved game was found."
+      primaryLabel="Continue"
+      primaryAction={handleContinue}
+      secondaryLabel="Discard"
+      secondaryAction={handleDiscard}
+      onClose={handleDiscard}
+    />
   )
 }

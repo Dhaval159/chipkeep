@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Player } from '../types/game'
 import { validateBet } from '../utils/betting'
+import { Button } from './ui/Button'
 
 const QUICK_AMOUNTS = [10, 20, 50, 100, 500]
 
@@ -72,49 +73,29 @@ export function ActionsModal({
             </p>
             <div className="bet-actions">
               {!player.seen && (
-                <button
-                  type="button"
-                  className="btn btn-full"
-                  onClick={onSee}
-                >
+                <Button variant="secondary" fullWidth onClick={onSee}>
                   See Cards
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
-                className="btn btn-primary btn-full"
-                onClick={() => setMode('bet')}
-              >
+              <Button variant="primary" fullWidth onClick={() => setMode('bet')}>
                 Bet (Chaal)
-              </button>
+              </Button>
               {canSideShow && (
-                <button
-                  type="button"
-                  className="btn btn-full"
-                  onClick={onRequestSideShow}
-                >
+                <Button variant="secondary" fullWidth onClick={onRequestSideShow}>
                   Side Show
-                </button>
+                </Button>
               )}
               {canShow && (
-                <button
-                  type="button"
-                  className="btn btn-full"
-                  onClick={onRequestShow}
-                >
+                <Button variant="secondary" fullWidth onClick={onRequestShow}>
                   Show
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
-                className="btn btn-full"
-                onClick={onPack}
-              >
+              <Button variant="danger" fullWidth onClick={onPack}>
                 Pack (Fold)
-              </button>
-              <button type="button" className="btn btn-full" onClick={onClose}>
+              </Button>
+              <Button variant="secondary" fullWidth onClick={onClose}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -142,34 +123,26 @@ export function ActionsModal({
 
             <div className="quick-bets">
               {QUICK_AMOUNTS.map((value) => (
-                <button
-                  type="button"
+                <Button
                   key={value}
-                  className="btn quick-bet"
+                  variant="secondary"
                   onClick={() => addQuick(value)}
+                  style={{ padding: '0.6rem 0.25rem', fontSize: '0.85rem', height: 'auto' }}
                 >
                   +{value}
-                </button>
+                </Button>
               ))}
             </div>
 
             {error && <p className="error-text">{error}</p>}
 
             <div className="modal__actions">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setMode('menu')}
-              >
+              <Button variant="secondary" onClick={() => setMode('menu')}>
                 Back
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleConfirmBet}
-              >
+              </Button>
+              <Button variant="primary" onClick={handleConfirmBet}>
                 Confirm
-              </button>
+              </Button>
             </div>
           </>
         )}

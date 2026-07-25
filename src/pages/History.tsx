@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { HandSummary } from '../types/timeline'
 import { timeline } from '../utils/timeline'
+import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card'
+import { SectionHeader } from '../components/ui/SectionHeader'
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -27,19 +30,17 @@ export default function History() {
     const h = selectedHand
     return (
       <div className="home-container">
-        <button
-          type="button"
-          className="back-button"
+        <Button
+          variant="secondary"
           onClick={() => setSelectedHand(null)}
+          style={{ alignSelf: 'flex-start' }}
         >
           ← Back
-        </button>
+        </Button>
 
-        <header className="header" style={{ marginTop: 0, textAlign: 'left' }}>
-          <h1 className="logo">Hand #{h.handNumber}</h1>
-        </header>
+        <SectionHeader title={`Hand #${h.handNumber}`} />
 
-        <div className="history-detail">
+        <Card>
           <div className="history-detail__row">
             <span className="history-detail__label">Winner</span>
             <span className="history-detail__value">{h.winner}</span>
@@ -64,9 +65,9 @@ export default function History() {
             <span className="history-detail__label">Duration</span>
             <span className="history-detail__value">{formatDuration(h.duration)}</span>
           </div>
-        </div>
+        </Card>
 
-        <div className="history-detail">
+        <Card>
           <h3 className="history-detail__title">Final Standings</h3>
           {h.playersAtEnd.map((p) => (
             <div className="history-detail__row" key={p.name}>
@@ -74,25 +75,22 @@ export default function History() {
               <span className="history-detail__value">{p.chips.toLocaleString()} chips</span>
             </div>
           ))}
-        </div>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="home-container">
-      <button
-        type="button"
-        className="back-button"
+      <Button
+        variant="secondary"
         onClick={() => navigate('/')}
+        style={{ alignSelf: 'flex-start' }}
       >
         ← Back
-      </button>
+      </Button>
 
-      <header className="header" style={{ marginTop: 0, textAlign: 'left' }}>
-        <h1 className="logo">Hand History</h1>
-        <p className="subtitle">Completed hands</p>
-      </header>
+      <SectionHeader title="Hand History" subtitle="Completed hands" />
 
       {hands.length === 0 && (
         <p className="subtitle">No completed hands yet.</p>
@@ -100,9 +98,7 @@ export default function History() {
 
       <div className="player-list">
         {hands.map((h) => (
-          <button
-            type="button"
-            className="player-card"
+          <Card
             key={`${h.handNumber}-${h.endTime}`}
             onClick={() => setSelectedHand(h)}
             style={{ cursor: 'pointer', textAlign: 'left', width: '100%' }}
@@ -115,7 +111,7 @@ export default function History() {
                 Winner: {h.winner} · {h.potWon.toLocaleString()} chips · {formatDuration(h.duration)}
               </div>
             </div>
-          </button>
+          </Card>
         ))}
       </div>
     </div>

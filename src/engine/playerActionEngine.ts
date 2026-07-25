@@ -93,14 +93,29 @@ function handleSeeCards(state: GameState, playerId: string): GameState {
   }
 }
 
-export function canSideShow(requester: Player, opponent: Player): boolean {
+export function canSideShow(requester: Player, opponent: Player, activeCount: number): boolean {
   return (
+    activeCount >= 3 &&
     requester.status === 'active' &&
     requester.seen &&
     opponent.seen &&
     isEligibleForTurn(opponent) &&
     requester.id !== opponent.id
   )
+}
+
+export function getSideShowDisableReason(
+  requester: Player | undefined,
+  opponent: Player | undefined,
+  activeCount: number,
+): string | null {
+  if (!requester) return null
+  if (activeCount < 3) return 'Only available with three or more active players'
+  if (!requester.seen) return 'You must see your cards first'
+  if (!opponent) return 'No eligible adjacent player found'
+  if (!opponent.seen) return 'Adjacent player has not seen their cards'
+  if (!isEligibleForTurn(opponent)) return 'Adjacent player has packed'
+  return null
 }
 
 function handleSideShow(
@@ -111,38 +126,25 @@ function handleSideShow(
 ): GameState {
   const requester = state.players.find((p) => p.id === playerId)
   const opponent = state.players.find((p) => p.id === opponentId)
-  if (!requester || !opponent || !canSideShow(requester, opponent)) {
+  const activeCount = countActivePlayers(state.players)
+  if (!requester || !opponent || !canSideShow(requester, opponent, activeCount)) {
     return state
   }
   if (loserId !== playerId && loserId !== opponentId) {
     return state
   }
 
-  const cost = state.currentStake
-  if (cost > requester.chips) {
-    return state
-  }
-
   const sideShowState: GameState = {
     ...state,
     players: state.players.map((p) => {
-      if (p.id === playerId) {
-        return { ...p, chips: p.chips - cost }
-      }
       if (p.id === loserId) {
         return { ...p, status: 'folded' }
       }
       return p
     }),
-    pot: state.pot + cost,
   }
 
-  // If the requester lost, advance to the next player; otherwise the
-  // requester keeps the turn since the opponent was eliminated.
-  const advanced =
-    loserId === playerId
-      ? advanceTurnFrom(sideShowState, playerId)
-      : sideShowState
+  const advanced = advanceTurnFrom(sideShowState, playerId)
   return settleIfWon(advanced)
 }
 
