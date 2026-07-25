@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import { GameHeader } from '../components/GameHeader'
 import { TablePlayerCard } from '../components/TablePlayerCard'
@@ -17,6 +17,8 @@ import {
   getNextActiveIndex,
 } from '../utils/turn'
 import { validateBet } from '../utils/betting'
+import { clearSavedGame } from '../utils/storage'
+import { subscribeToGameState } from '../lib/gameSync'
 
 type DialogState = 'none' | 'confirm-hand' | 'confirm-undo' | 'side-show' | 'show' | 'timeline' | 'menu'
 type SheetView = 'closed' | 'menu' | 'bet'
@@ -25,18 +27,75 @@ type NavTab = 'history' | 'timeline' | 'settings'
 const QUICK_BET_AMOUNTS = [10, 20, 50, 100, 500]
 
 export default function Game() {
+  const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { game, startNewHand, dispatchAction, undo, canUndo } = useGame()
+  const { game, startNewHand, dispatchAction, undo, canUndo, restoreGame } = useGame()
+
+  const [multiplayerLoading, setMultiplayerLoading] = useState(!!roomId)
+  const [multiplayerError, setMultiplayerError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<DialogState>('none')
   const [sheetView, setSheetView] = useState<SheetView>('closed')
   const [endHandDismissed, setEndHandDismissed] = useState(false)
   const [betAmount, setBetAmount] = useState('')
   const [betError, setBetError] = useState<string | null>(null)
   const [navTab, setNavTab] = useState<NavTab>('history')
+  const [lastStake, setLastStake] = useState(0)
+
+  const stateLoadedRef = useRef(false)
 
   const { players, pot, handNumber, currentStake } = game
 
-  const [lastStake, setLastStake] = useState(0)
+  useEffect(() => {
+    if (!roomId) {
+      stateLoadedRef.current = true
+      setMultiplayerLoading(false)
+      return
+    }
+
+    clearSavedGame()
+
+    const unsub = subscribeToGameState(roomId, (gameState) => {
+      if (gameState && !stateLoadedRef.current) {
+        stateLoadedRef.current = true
+        restoreGame(gameState)
+        setMultiplayerLoading(false)
+      } else if (!gameState && !stateLoadedRef.current) {
+        setMultiplayerError('Game data not found.')
+        setMultiplayerLoading(false)
+      }
+    })
+
+    return () => {
+      unsub()
+      stateLoadedRef.current = false
+    }
+  }, [roomId, restoreGame])
+
+  if (multiplayerLoading) {
+    return (
+      <div className="game-page">
+        <GameHeader title="ChipKeep" subtitle="Loading Game..." onBack={() => navigate('/')} />
+        <div className="game-empty">
+          <div className="ck-btn__spinner" />
+          <p className="game-empty__text" style={{ marginTop: 16 }}>Loading game state...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (multiplayerError) {
+    return (
+      <div className="game-page">
+        <GameHeader title="ChipKeep" subtitle="Error" onBack={() => navigate('/')} />
+        <div className="game-empty">
+          <p className="game-empty__text">{multiplayerError}</p>
+          <Button variant="primary" fullWidth onClick={() => navigate('/')}>
+            Return Home
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const activeIndex = players.findIndex((p) => p.status === 'active')
   const activePlayer = activeIndex >= 0 ? players[activeIndex] : undefined

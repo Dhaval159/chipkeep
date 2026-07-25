@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMultiplayer } from '../hooks/useMultiplayer'
-import { leaveRoom, markDisconnected, reconnectToRoom, subscribeToRoom, updateRoomStatus } from '../lib/rooms'
+import { leaveRoom, markDisconnected, reconnectToRoom, subscribeToRoom, startGameInRoom } from '../lib/rooms'
 import type { Room, RoomPlayer } from '../types/multiplayer'
+import type { Player } from '../types/game'
+import { GameEngineImpl } from '../engine/GameEngine'
+import { clearSavedGame } from '../utils/storage'
 import { Button } from '../components/ui/Button'
 import { Avatar } from '../components/ui/Avatar'
 import { Copy, Check, LogOut, Play, Users } from 'lucide-react'
 
+const DEFAULT_STARTING_CHIPS = 10000
+const engine = new GameEngineImpl()
+
 export default function Lobby() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { uid, currentRoom, setCurrentRoom } = useMultiplayer()
+  const { uid, currentRoom, setCurrentRoom, displayName } = useMultiplayer()
 
   const [room, setRoom] = useState<(Room & { id: string }) | null>(null)
   const [loading, setLoading] = useState(true)
@@ -18,6 +24,7 @@ export default function Lobby() {
   const [copied, setCopied] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [navigated, setNavigated] = useState(false)
 
   const uidRef = useRef(uid)
   uidRef.current = uid
@@ -33,6 +40,12 @@ export default function Lobby() {
       if (updatedRoom) {
         setRoom(updatedRoom)
         setLoading(false)
+
+        if (updatedRoom.status === 'playing' && uidRef.current && !navigated) {
+          setNavigated(true)
+          clearSavedGame()
+          navigate(`/game/${roomId}`, { replace: true })
+        }
       } else {
         setError('Room not found')
         setLoading(false)
@@ -40,7 +53,7 @@ export default function Lobby() {
     })
 
     return unsub
-  }, [roomId])
+  }, [roomId, navigate, navigated])
 
   useEffect(() => {
     const currentUid = uidRef.current
@@ -102,10 +115,34 @@ export default function Lobby() {
   }
 
   const handleStartGame = async () => {
-    if (!roomId || !isHost) return
+    if (!roomId || !isHost || !room) return
     setStarting(true)
     try {
-      await updateRoomStatus(roomId, 'playing')
+      const rawPlayers = Object.values(room.players).filter(
+        (p): p is RoomPlayer & { playerId: string } =>
+          Boolean(p && typeof p === 'object' && 'playerId' in p),
+      )
+
+      const gamePlayers: Player[] = rawPlayers.map((p) => ({
+        id: p.playerId,
+        name: p.displayName,
+        chips: DEFAULT_STARTING_CHIPS,
+        status: 'waiting' as const,
+        seen: false,
+      }))
+
+      let gameState = engine.createInitialState({
+        players: gamePlayers,
+        startingChips: DEFAULT_STARTING_CHIPS,
+      })
+
+      gameState = engine.createNewHandState(gameState)
+
+      await startGameInRoom(roomId, gameState)
+
+      clearSavedGame()
+      setNavigated(true)
+      navigate(`/game/${roomId}`, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start game')
     } finally {

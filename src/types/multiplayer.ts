@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore'
+import type { GameState } from './game'
 
 export interface RoomPlayer {
   playerId: string
@@ -16,5 +17,5 @@ export interface Room {
   createdAt: Date | Timestamp
   status: RoomStatus
   players: Record<string, RoomPlayer>
-  gameState: null
+  gameState: GameState | null
 }

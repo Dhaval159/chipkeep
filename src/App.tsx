@@ -19,6 +19,7 @@ function App() {
           <Route path="/create" element={<CreateGame />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/game" element={<Game />} />
+          <Route path="/game/:roomId" element={<Game />} />
           <Route path="/history" element={<History />} />
           <Route path="/create-room" element={<CreateRoom />} />
           <Route path="/join-room" element={<JoinRoom />} />

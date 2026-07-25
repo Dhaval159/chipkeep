@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Room, RoomPlayer, RoomStatus } from '../types/multiplayer'
+import type { GameState } from '../types/game'
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
@@ -48,7 +49,7 @@ function deserializeRoom(id: string, data: Record<string, unknown>): Room & { id
     hostId: raw.hostId,
     createdAt: toDate(raw.createdAt),
     status: raw.status,
-    gameState: null,
+    gameState: (data.gameState as GameState | undefined) ?? null,
     players: Object.fromEntries(
       Object.entries(raw.players ?? {}).map(([pid, p]) => {
         const player = p as RoomPlayer
@@ -62,6 +63,17 @@ function deserializeRoom(id: string, data: Record<string, unknown>): Room & { id
       }),
     ),
   }
+}
+
+export async function startGameInRoom(
+  roomId: string,
+  gameState: GameState,
+): Promise<void> {
+  const roomRef = doc(db, 'rooms', roomId)
+  await updateDoc(roomRef, {
+    gameState,
+    status: 'playing',
+  })
 }
 
 export async function createRoom(
