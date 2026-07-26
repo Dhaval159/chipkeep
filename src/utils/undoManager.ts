@@ -6,7 +6,7 @@ function cloneState(state: GameState): GameState {
   return JSON.parse(JSON.stringify(state))
 }
 
-class UndoManagerImpl {
+export class UndoManager {
   private snapshots: GameState[] = []
 
   pushSnapshot(state: GameState): void {
@@ -30,4 +30,4 @@ class UndoManagerImpl {
   }
 }
 
-export const undoManager = new UndoManagerImpl()
+export const undoManager = new UndoManager()

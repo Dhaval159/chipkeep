@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import { GameHeader } from '../components/GameHeader'
@@ -17,85 +17,29 @@ import {
   getNextActiveIndex,
 } from '../utils/turn'
 import { validateBet } from '../utils/betting'
-import { clearSavedGame } from '../utils/storage'
-import { subscribeToGameState } from '../lib/gameSync'
 
 type DialogState = 'none' | 'confirm-hand' | 'confirm-undo' | 'side-show' | 'show' | 'timeline' | 'menu'
 type SheetView = 'closed' | 'menu' | 'bet'
-type NavTab = 'history' | 'timeline' | 'settings'
 
 const QUICK_BET_AMOUNTS = [10, 20, 50, 100, 500]
+const POSITION_SLOTS = [0, 1, 2, 3, 4, 5]
 
 export default function Game() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { game, startNewHand, dispatchAction, undo, canUndo, restoreGame } = useGame()
-
-  const [multiplayerLoading, setMultiplayerLoading] = useState(!!roomId)
-  const [multiplayerError, setMultiplayerError] = useState<string | null>(null)
+  const { game, startNewHand, dispatchAction, undo, canUndo, multiplayer } = useGame()
   const [dialog, setDialog] = useState<DialogState>('none')
   const [sheetView, setSheetView] = useState<SheetView>('closed')
   const [endHandDismissed, setEndHandDismissed] = useState(false)
   const [betAmount, setBetAmount] = useState('')
   const [betError, setBetError] = useState<string | null>(null)
-  const [navTab, setNavTab] = useState<NavTab>('history')
   const [lastStake, setLastStake] = useState(0)
 
-  const stateLoadedRef = useRef(false)
-
   const { players, pot, handNumber, currentStake } = game
-
-  useEffect(() => {
-    if (!roomId) {
-      stateLoadedRef.current = true
-      setMultiplayerLoading(false)
-      return
-    }
-
-    clearSavedGame()
-
-    const unsub = subscribeToGameState(roomId, (gameState) => {
-      if (gameState && !stateLoadedRef.current) {
-        stateLoadedRef.current = true
-        restoreGame(gameState)
-        setMultiplayerLoading(false)
-      } else if (!gameState && !stateLoadedRef.current) {
-        setMultiplayerError('Game data not found.')
-        setMultiplayerLoading(false)
-      }
-    })
-
-    return () => {
-      unsub()
-      stateLoadedRef.current = false
-    }
-  }, [roomId, restoreGame])
-
-  if (multiplayerLoading) {
-    return (
-      <div className="game-page">
-        <GameHeader title="ChipKeep" subtitle="Loading Game..." onBack={() => navigate('/')} />
-        <div className="game-empty">
-          <div className="ck-btn__spinner" />
-          <p className="game-empty__text" style={{ marginTop: 16 }}>Loading game state...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (multiplayerError) {
-    return (
-      <div className="game-page">
-        <GameHeader title="ChipKeep" subtitle="Error" onBack={() => navigate('/')} />
-        <div className="game-empty">
-          <p className="game-empty__text">{multiplayerError}</p>
-          <Button variant="primary" fullWidth onClick={() => navigate('/')}>
-            Return Home
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  const isMultiplayer = Boolean(roomId)
+  const isCurrentPlayerTurn = multiplayer?.isCurrentPlayerTurn ?? true
+  const isHost = multiplayer?.isHost ?? false
+  const waitingForPlayer = isMultiplayer && !isCurrentPlayerTurn && !!players.find((p) => p.status === 'active')
 
   const activeIndex = players.findIndex((p) => p.status === 'active')
   const activePlayer = activeIndex >= 0 ? players[activeIndex] : undefined
@@ -117,18 +61,6 @@ export default function Game() {
   const dealerIndex = activeIndex
   const dealer = dealerIndex >= 0 ? players[dealerIndex] : undefined
 
-  const blindCount = useMemo(
-    () => players.filter((p) => p.status !== 'folded' && p.status !== 'out' && !p.seen).length,
-    [players],
-  )
-  const seenCount = useMemo(
-    () => players.filter((p) => p.status !== 'folded' && p.status !== 'out' && p.seen).length,
-    [players],
-  )
-  const playersLeft = useMemo(
-    () => players.filter((p) => p.status !== 'folded' && p.status !== 'out').length,
-    [players],
-  )
 
   const closeDialog = () => setDialog('none')
 
@@ -214,8 +146,6 @@ export default function Game() {
     setDialog('show')
   }
 
-  const POSITION_SLOTS = [0, 1, 2, 3, 4, 5]
-
   const playersWithPositions = useMemo(() => {
     if (players.length === 0) return []
     return players.map((player, i) => ({
@@ -298,11 +228,18 @@ export default function Game() {
         </div>
       </div>
 
+      {waitingForPlayer && (
+        <div className="game-status-banner">
+          Waiting for {activePlayer?.name ?? 'current player'} to take their turn...
+        </div>
+      )}
+
       {activePlayer && !game.handComplete && (
         <button
           className="game-fab"
           onClick={openSheet}
           type="button"
+          disabled={!isCurrentPlayerTurn}
         >
           Take Turn
         </button>
@@ -381,10 +318,20 @@ export default function Game() {
             <h2 className="modal__title">Game Menu</h2>
 
             <div className="bet-actions">
-              <Button variant="primary" fullWidth onClick={() => { setDialog('confirm-hand'); }}>
+              <Button
+                variant="primary"
+                fullWidth
+                disabled={isMultiplayer && !isHost}
+                onClick={() => { setDialog('confirm-hand'); }}
+              >
                 New Hand
               </Button>
-              <Button variant="secondary" fullWidth disabled={!canUndo} onClick={() => { setDialog('confirm-undo'); }}>
+              <Button
+                variant="secondary"
+                fullWidth
+                disabled={!canUndo || (isMultiplayer && !isHost)}
+                onClick={() => { setDialog('confirm-undo'); }}
+              >
                 Undo
               </Button>
               <Button variant="secondary" fullWidth onClick={() => { setDialog('timeline'); }}>
@@ -546,7 +493,7 @@ export default function Game() {
       </BottomSheet>
 
       <BottomNav
-        activeTab={navTab}
+        activeTab="history"
         onHistory={() => navigate('/history')}
         onTimeline={() => setDialog('timeline')}
         onSettings={() => navigate('/settings')}

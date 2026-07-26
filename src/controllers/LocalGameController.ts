@@ -2,7 +2,7 @@ import type { GameState, PlayerAction, StartGamePayload } from '../types/game'
 import type { GameEngine } from '../engine/GameEngine'
 import type { PersistenceProvider } from '../persistence/PersistenceProvider'
 import type { GameController } from './GameController'
-import { undoManager } from '../utils/undoManager'
+import { UndoManager } from '../utils/undoManager'
 import { timeline } from '../utils/timeline'
 
 export class LocalGameController implements GameController {
@@ -12,6 +12,7 @@ export class LocalGameController implements GameController {
   private listeners = new Set<() => void>()
   private handStartTime = 0
   private handPlayersAtStart: string[] = []
+  private undoManager = new UndoManager()
 
   constructor(
     engine: GameEngine,
@@ -28,7 +29,7 @@ export class LocalGameController implements GameController {
   }
 
   get canUndo(): boolean {
-    return undoManager.canUndo()
+    return this.undoManager.canUndo()
   }
 
   subscribe(listener: () => void): () => void {
@@ -44,7 +45,7 @@ export class LocalGameController implements GameController {
   }
 
   startGame(payload: StartGamePayload): void {
-    undoManager.clearHistory()
+    this.undoManager.clearHistory()
     timeline.clear()
     timeline.addEvent({
       handNumber: 0,
@@ -59,7 +60,7 @@ export class LocalGameController implements GameController {
   }
 
   startNewHand(): void {
-    undoManager.pushSnapshot(this._state)
+    this.undoManager.pushSnapshot(this._state)
     const newHandNumber = this._state.handNumber + 1
     timeline.addEvent({
       handNumber: newHandNumber,
@@ -137,7 +138,7 @@ export class LocalGameController implements GameController {
       }
     }
 
-    undoManager.pushSnapshot(this._state)
+    this.undoManager.pushSnapshot(this._state)
     const prevComplete = this._state.handComplete
     this._state = this.engine.executeAction(this._state, action)
 
@@ -167,7 +168,7 @@ export class LocalGameController implements GameController {
   }
 
   undo(): void {
-    const snapshot = undoManager.undo()
+    const snapshot = this.undoManager.undo()
     if (snapshot) {
       timeline.addEvent({
         handNumber: snapshot.handNumber,
@@ -181,14 +182,14 @@ export class LocalGameController implements GameController {
   }
 
   resetGame(): void {
-    undoManager.clearHistory()
+    this.undoManager.clearHistory()
     timeline.clear()
     this._state = this.engine.createIdleState()
     this.notify()
   }
 
   restoreGame(state: GameState): void {
-    undoManager.clearHistory()
+    this.undoManager.clearHistory()
     this._state = state
     this.notify()
   }
