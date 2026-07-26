@@ -1,6 +1,14 @@
 import { createContext } from 'react'
 import type { GameState, PlayerAction, StartGamePayload } from '../types/game'
 
+export interface MultiplayerSessionMeta {
+  roomId: string
+  playerId: string
+  hostId: string | null
+  isHost: boolean
+  isCurrentPlayerTurn: boolean
+}
+
 export interface GameContextValue {
   game: GameState
   startGame: (payload: StartGamePayload) => void
@@ -11,6 +19,7 @@ export interface GameContextValue {
   restoreGame: (state: GameState) => void
   undo: () => void
   canUndo: boolean
+  multiplayer?: MultiplayerSessionMeta
 }
 
 export const initialGameState: GameState = {

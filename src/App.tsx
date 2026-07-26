@@ -9,6 +9,7 @@ import CreateRoom from './pages/CreateRoom'
 import JoinRoom from './pages/JoinRoom'
 import Lobby from './pages/Lobby'
 import { LoadGameModal } from './components/LoadGameModal'
+import { MultiplayerGameProvider } from './context/MultiplayerGameProvider'
 
 function App() {
   return (
@@ -19,7 +20,14 @@ function App() {
           <Route path="/create" element={<CreateGame />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/game" element={<Game />} />
-          <Route path="/game/:roomId" element={<Game />} />
+          <Route
+            path="/game/:roomId"
+            element={
+              <MultiplayerGameProvider>
+                <Game />
+              </MultiplayerGameProvider>
+            }
+          />
           <Route path="/history" element={<History />} />
           <Route path="/create-room" element={<CreateRoom />} />
           <Route path="/join-room" element={<JoinRoom />} />

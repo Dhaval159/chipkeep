@@ -16,23 +16,25 @@ const engine = new GameEngineImpl()
 export default function Lobby() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { uid, currentRoom, setCurrentRoom, displayName } = useMultiplayer()
+  const { uid, setCurrentRoom } = useMultiplayer()
 
+  const missingRoomId = !roomId
   const [room, setRoom] = useState<(Room & { id: string }) | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(!missingRoomId)
+  const [error, setError] = useState<string | null>(missingRoomId ? 'No room ID provided' : null)
   const [copied, setCopied] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [starting, setStarting] = useState(false)
   const [navigated, setNavigated] = useState(false)
 
   const uidRef = useRef(uid)
-  uidRef.current = uid
+
+  useEffect(() => {
+    uidRef.current = uid
+  }, [uid])
 
   useEffect(() => {
     if (!roomId) {
-      setError('No room ID provided')
-      setLoading(false)
       return
     }
 
@@ -81,7 +83,6 @@ export default function Lobby() {
     : []
 
   const isHost = uid ? room?.hostId === uid : false
-  const isConnected = uid ? room?.players[uid]?.isConnected : false
   const onlineCount = playerList.filter((p) => p.isConnected).length
 
   const handleCopyCode = async () => {
