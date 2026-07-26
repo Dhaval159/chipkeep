@@ -6,17 +6,57 @@ import { GameEngineImpl } from '../engine/GameEngine'
 import { LocalGameController } from '../controllers/LocalGameController'
 import { LocalStoragePersistence } from '../persistence/LocalStoragePersistence'
 
-function createController(): LocalGameController {
-  return new LocalGameController(
+function createController(multiplayer: boolean): LocalGameController {
+  const controller = new LocalGameController(
     new GameEngineImpl(),
     new LocalStoragePersistence(),
     initialGameState,
   )
+  controller.setMultiplayer(multiplayer)
+  return controller
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const [multiplayer, setMultiplayer] = useState(() => {
+    try {
+      const raw = localStorage.getItem('chipkeep-current-room')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        return !!(parsed && parsed.roomId)
+      }
+    } catch { /* ignore */ }
+    return false
+  })
+
+  const [controller] = useState(() => createController(multiplayer))
+
+  useEffect(() => {
+    const detectMultiplayer = () => {
+      try {
+        const raw = localStorage.getItem('chipkeep-current-room')
+        const inMultiplayer = raw ? !!(JSON.parse(raw)?.roomId) : false
+        setMultiplayer(inMultiplayer)
+        controller.setMultiplayer(inMultiplayer)
+      } catch {
+        setMultiplayer(false)
+        controller.setMultiplayer(false)
+      }
+    }
+
+    const handleRoomChange = () => detectMultiplayer()
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'chipkeep-current-room') detectMultiplayer()
+    }
+
+    window.addEventListener('chipkeep-room-change', handleRoomChange)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('chipkeep-room-change', handleRoomChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [controller])
+
   const [game, setGame] = useState<GameState>(initialGameState)
-  const [controller] = useState(createController)
 
   useEffect(() => {
     const unsub = controller.subscribe(() => {
@@ -55,6 +95,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [controller],
   )
 
+  const restoreGameState = useCallback(
+    (state: GameState) => controller.restoreGameState(state),
+    [controller],
+  )
+
   const undo = useCallback(
     () => controller.undo(),
     [controller],
@@ -69,8 +114,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatchAction,
       resetGame,
       restoreGame,
+      restoreGameState,
       undo,
       canUndo: controller.canUndo,
+      isMultiplayer: multiplayer,
     }),
     [
       game,
@@ -80,8 +127,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       dispatchAction,
       resetGame,
       restoreGame,
+      restoreGameState,
       undo,
       controller,
+      multiplayer,
     ],
   )
 

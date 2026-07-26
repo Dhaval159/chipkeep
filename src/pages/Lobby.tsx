@@ -43,7 +43,7 @@ export default function Lobby() {
         setRoom(updatedRoom)
         setLoading(false)
 
-        if (updatedRoom.status === 'playing' && uidRef.current && !navigated) {
+        if (updatedRoom.status === 'playing' && updatedRoom.gameState && uidRef.current && !navigated) {
           setNavigated(true)
           clearSavedGame()
           navigate(`/game/${roomId}`, { replace: true })
@@ -142,8 +142,6 @@ export default function Lobby() {
       await startGameInRoom(roomId, gameState)
 
       clearSavedGame()
-      setNavigated(true)
-      navigate(`/game/${roomId}`, { replace: true })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to start game')
     } finally {

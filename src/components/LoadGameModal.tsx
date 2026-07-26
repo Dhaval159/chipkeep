@@ -4,10 +4,23 @@ import { useGame } from '../hooks/useGame'
 import { loadGame, clearSavedGame } from '../utils/storage'
 import { Dialog } from './ui/Dialog'
 
+function shouldShowLoadModal(): boolean {
+  try {
+    const roomRaw = localStorage.getItem('chipkeep-current-room')
+    if (roomRaw) {
+      const parsed = JSON.parse(roomRaw)
+      if (parsed && parsed.roomId) {
+        return false
+      }
+    }
+  } catch { /* ignore */ }
+  return Boolean(loadGame())
+}
+
 export function LoadGameModal() {
   const navigate = useNavigate()
   const { restoreGame } = useGame()
-  const [show, setShow] = useState(() => Boolean(loadGame()))
+  const [show, setShow] = useState(shouldShowLoadModal)
 
   const handleContinue = () => {
     const saved = loadGame()

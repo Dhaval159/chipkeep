@@ -98,6 +98,7 @@ export function MultiplayerProvider({ children }: { children: ReactNode }) {
     (room: { roomId: string; roomCode: string } | null) => {
       setCurrentRoomState(room)
       saveRoom(room)
+      window.dispatchEvent(new CustomEvent('chipkeep-room-change', { detail: room }))
     },
     [],
   )

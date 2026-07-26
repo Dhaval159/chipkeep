@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import { GameHeader } from '../components/GameHeader'
@@ -17,6 +17,9 @@ import {
   getNextActiveIndex,
 } from '../utils/turn'
 import { validateBet } from '../utils/betting'
+import { clearSavedGame } from '../utils/storage'
+import { useMultiplayer } from '../hooks/useMultiplayer'
+import { subscribeToGameState, writeGameState } from '../lib/gameSync'
 
 type DialogState = 'none' | 'confirm-hand' | 'confirm-undo' | 'side-show' | 'show' | 'timeline' | 'menu'
 type SheetView = 'closed' | 'menu' | 'bet'
@@ -27,7 +30,10 @@ const POSITION_SLOTS = [0, 1, 2, 3, 4, 5]
 export default function Game() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-  const { game, startNewHand, dispatchAction, undo, canUndo, multiplayer } = useGame()
+  const { game, startNewHand, dispatchAction, undo, canUndo, restoreGame, restoreGameState } = useGame()
+
+  const [multiplayerLoading, setMultiplayerLoading] = useState(!!roomId)
+  const [multiplayerError, setMultiplayerError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<DialogState>('none')
   const [sheetView, setSheetView] = useState<SheetView>('closed')
   const [endHandDismissed, setEndHandDismissed] = useState(false)
@@ -35,14 +41,272 @@ export default function Game() {
   const [betError, setBetError] = useState<string | null>(null)
   const [lastStake, setLastStake] = useState(0)
 
+  const stateLoadedRef = useRef(false)
+
+  const [isHost, setIsHost] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const isHostRef = useRef(false)
+  const hostIdRef = useRef<string | null>(null)
+  const gameRef = useRef(game)
+  const { uid } = useMultiplayer()
+  const uidRef = useRef(uid)
+  const isMultiplayer = !!roomId
+
+  useEffect(() => { uidRef.current = uid }, [uid])
+  useEffect(() => { gameRef.current = game }, [game])
+
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const syncInProgressRef = useRef(false)
+  const syncPendingRef = useRef(false)
+  const debouncedSyncRef = useRef<(() => void) | null>(null)
+
   const { players, pot, handNumber, currentStake } = game
-  const isMultiplayer = Boolean(roomId)
-  const isCurrentPlayerTurn = multiplayer?.isCurrentPlayerTurn ?? true
-  const isHost = multiplayer?.isHost ?? false
-  const waitingForPlayer = isMultiplayer && !isCurrentPlayerTurn && !!players.find((p) => p.status === 'active')
+
+  const activePlayer = useMemo(() => {
+    const idx = players.findIndex((p) => p.status === 'active')
+    return idx >= 0 ? players[idx] : undefined
+  }, [players])
+
+  const controlsDisabled = isMultiplayer ? (!isHost || syncing) : false
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const debouncedSync = useCallback(() => {
+    if (!roomId || !isHostRef.current) return
+    if (syncInProgressRef.current) {
+      syncPendingRef.current = true
+      return
+    }
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+    }
+    syncTimeoutRef.current = setTimeout(() => {
+      syncTimeoutRef.current = null
+      syncInProgressRef.current = true
+      setSyncing(true)
+      writeGameState(roomId, gameRef.current)
+        .then(() => {
+          syncInProgressRef.current = false
+          setSyncing(false)
+          if (syncPendingRef.current) {
+            syncPendingRef.current = false
+            debouncedSyncRef.current?.()
+          }
+        })
+        .catch((err) => {
+          syncInProgressRef.current = false
+          setSyncing(false)
+          const message = err instanceof Error ? err.message : 'Failed to sync game state'
+          setMultiplayerError(message)
+        })
+    }, 300)
+  }, [roomId])
+
+  useEffect(() => {
+    debouncedSyncRef.current = debouncedSync
+  })
+
+  useEffect(() => {
+    if (!roomId) {
+      stateLoadedRef.current = true
+      return
+    }
+
+    clearSavedGame()
+
+    const timeoutId = setTimeout(() => {
+      if (!stateLoadedRef.current) {
+        stateLoadedRef.current = true
+        setMultiplayerError('Timed out waiting for game state.')
+        setMultiplayerLoading(false)
+      }
+    }, 5000)
+
+    const unsub = subscribeToGameState(roomId, (gameState, hostId) => {
+      if (!stateLoadedRef.current) {
+        if (gameState) {
+          stateLoadedRef.current = true
+          clearTimeout(timeoutId)
+          if (hostId) {
+            hostIdRef.current = hostId
+            const host = uidRef.current === hostId
+            setIsHost(host)
+            isHostRef.current = host
+          }
+          restoreGame(gameState)
+          setMultiplayerLoading(false)
+        } else if (hostId === undefined) {
+          stateLoadedRef.current = true
+          clearTimeout(timeoutId)
+          setMultiplayerError('Game data not found.')
+          setMultiplayerLoading(false)
+        }
+      } else if (gameState) {
+        if (!isHostRef.current) {
+          restoreGameState(gameState)
+        }
+      } else {
+        setMultiplayerError('Game data not found.')
+      }
+    })
+
+    return () => {
+      clearTimeout(timeoutId)
+      unsub()
+      stateLoadedRef.current = false
+    }
+  }, [roomId, restoreGame, restoreGameState])
+
+  const hostExecute = useCallback(
+    (action: () => void) => {
+      if (!isMultiplayer) {
+        action()
+        return
+      }
+      if (!isHostRef.current) return
+      action()
+      debouncedSync()
+    },
+    [isMultiplayer, debouncedSync],
+  )
+
+  const handleStartHand = () => {
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      startNewHand()
+      setEndHandDismissed(false)
+      closeDialog()
+    })
+  }
+
+  const handleSee = () => {
+    if (!activePlayer) return
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      dispatchAction({ type: 'SEE_CARDS', playerId: activePlayer.id })
+      closeSheet()
+    })
+  }
+
+  const handleBet = (amount: number) => {
+    if (!activePlayer) return
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
+      closeSheet()
+    })
+  }
+
+  const handlePack = () => {
+    if (!activePlayer) return
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      setLastStake(currentStake)
+      dispatchAction({ type: 'PACK', playerId: activePlayer.id })
+      closeSheet()
+    })
+  }
+
+  const handleSideShowResult = (loserId: string) => {
+    if (!activePlayer || !sideShowOpponent) return
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      setLastStake(currentStake)
+      dispatchAction({
+        type: 'SIDE_SHOW',
+        playerId: activePlayer.id,
+        opponentId: sideShowOpponent.id,
+        loserId,
+      })
+      closeDialog()
+    })
+  }
+
+  const handleShowResult = (winnerId: string) => {
+    if (!activePlayer) return
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      setLastStake(currentStake)
+      dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
+      closeDialog()
+    })
+  }
+
+  const handleUndo = () => {
+    if (isMultiplayer && !isHost) return
+    hostExecute(() => {
+      undo()
+      setEndHandDismissed(false)
+      closeSheet()
+    })
+  }
+
+  const handleConfirmBet = () => {
+    if (!activePlayer) return
+    const value = Number(betAmount)
+    const result = validateBet(activePlayer, value, currentStake)
+    if (!result.valid) {
+      setBetError(result.error)
+      return
+    }
+    handleBet(value)
+  }
+
+  const handleRequestSideShow = () => {
+    closeSheet()
+    setDialog('side-show')
+  }
+
+  const handleRequestShow = () => {
+    closeSheet()
+    setDialog('show')
+  }
+
+  const playersWithPositions = useMemo(() => {
+    if (players.length === 0) return []
+    return players.map((player, i) => ({
+      player,
+      position: POSITION_SLOTS[i % POSITION_SLOTS.length],
+    }))
+  }, [players])
+
+  const showPlayers = activePlayer
+    ? players.filter((p) => p.status === 'active' || p.status === 'waiting')
+    : []
+
+  if (multiplayerLoading) {
+    return (
+      <div className="game-page">
+        <GameHeader title="ChipKeep" subtitle="Loading Game..." onBack={() => navigate('/')} />
+        <div className="game-empty">
+          <div className="ck-btn__spinner" />
+          <p className="game-empty__text" style={{ marginTop: 16 }}>Loading multiplayer game...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (multiplayerError) {
+    return (
+      <div className="game-page">
+        <GameHeader title="ChipKeep" subtitle="Error" onBack={() => navigate('/')} />
+        <div className="game-empty">
+          <p className="game-empty__text">{multiplayerError}</p>
+          <Button variant="primary" fullWidth onClick={() => navigate('/')}>
+            Return Home
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const activeIndex = players.findIndex((p) => p.status === 'active')
-  const activePlayer = activeIndex >= 0 ? players[activeIndex] : undefined
   const activeCount = countActivePlayers(players)
 
   const nextIndex = getNextActiveIndex(players, activeIndex)
@@ -75,86 +339,18 @@ export default function Game() {
     setBetError(null)
   }
 
-  const handleStartHand = () => {
-    startNewHand()
-    setEndHandDismissed(false)
-    closeDialog()
-  }
-
-  const handleSee = () => {
-    if (!activePlayer) return
-    dispatchAction({ type: 'SEE_CARDS', playerId: activePlayer.id })
-    closeSheet()
-  }
-
-  const handleBet = (amount: number) => {
-    if (!activePlayer) return
-    dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
-    closeSheet()
-  }
-
-  const handlePack = () => {
-    if (!activePlayer) return
-    setLastStake(currentStake)
-    dispatchAction({ type: 'PACK', playerId: activePlayer.id })
-    closeSheet()
-  }
-
-  const handleSideShowResult = (loserId: string) => {
-    if (!activePlayer || !sideShowOpponent) return
-    setLastStake(currentStake)
-    dispatchAction({
-      type: 'SIDE_SHOW',
-      playerId: activePlayer.id,
-      opponentId: sideShowOpponent.id,
-      loserId,
-    })
-    closeDialog()
-  }
-
-  const handleShowResult = (winnerId: string) => {
-    if (!activePlayer) return
-    setLastStake(currentStake)
-    dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
-    closeDialog()
-  }
-
-  const handleUndo = () => {
-    undo()
-    setEndHandDismissed(false)
-    closeSheet()
-  }
-
-  const handleConfirmBet = () => {
-    if (!activePlayer) return
-    const value = Number(betAmount)
-    const result = validateBet(activePlayer, value, currentStake)
-    if (!result.valid) {
-      setBetError(result.error)
-      return
-    }
-    handleBet(value)
-  }
-
-  const handleRequestSideShow = () => {
-    closeSheet()
-    setDialog('side-show')
-  }
-
-  const handleRequestShow = () => {
-    closeSheet()
-    setDialog('show')
-  }
-
-  const playersWithPositions = useMemo(() => {
-    if (players.length === 0) return []
-    return players.map((player, i) => ({
-      player,
-      position: POSITION_SLOTS[i % POSITION_SLOTS.length],
-    }))
-  }, [players])
-
   if (players.length === 0) {
+    if (isMultiplayer) {
+      return (
+        <div className="game-page">
+          <GameHeader title="ChipKeep" subtitle="Loading Game..." onBack={() => navigate('/')} />
+          <div className="game-empty">
+            <div className="ck-btn__spinner" />
+            <p className="game-empty__text" style={{ marginTop: 16 }}>Waiting for game state...</p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="game-page">
         <GameHeader
@@ -171,10 +367,6 @@ export default function Game() {
       </div>
     )
   }
-
-  const showPlayers = activePlayer
-    ? players.filter((p) => p.status === 'active' || p.status === 'waiting')
-    : []
 
   return (
     <div className="game-page">
@@ -228,22 +420,20 @@ export default function Game() {
         </div>
       </div>
 
-      {waitingForPlayer && (
-        <div className="game-status-banner">
-          Waiting for {activePlayer?.name ?? 'current player'} to take their turn...
-        </div>
-      )}
-
-      {activePlayer && !game.handComplete && (
+      {(syncing && isMultiplayer) ? (
+        <button className="game-fab game-fab--syncing" type="button" disabled>
+          Syncing...
+        </button>
+      ) : (activePlayer && !game.handComplete && (
         <button
           className="game-fab"
           onClick={openSheet}
           type="button"
-          disabled={!isCurrentPlayerTurn}
+          disabled={controlsDisabled}
         >
-          Take Turn
+          {isMultiplayer && !isHost ? `Waiting for ${activePlayer.name}...` : 'Take Turn'}
         </button>
-      )}
+      ))}
 
       <Dialog
         open={dialog === 'confirm-hand'}
@@ -261,11 +451,7 @@ export default function Game() {
         title="Undo Last Action?"
         description="This will restore the game to the previous state."
         primaryLabel="Undo"
-        primaryAction={() => {
-          undo()
-          setEndHandDismissed(false)
-          closeDialog()
-        }}
+        primaryAction={handleUndo}
         secondaryLabel="Cancel"
         secondaryAction={closeDialog}
         onClose={closeDialog}
@@ -318,20 +504,10 @@ export default function Game() {
             <h2 className="modal__title">Game Menu</h2>
 
             <div className="bet-actions">
-              <Button
-                variant="primary"
-                fullWidth
-                disabled={isMultiplayer && !isHost}
-                onClick={() => { setDialog('confirm-hand'); }}
-              >
+              <Button variant="primary" fullWidth disabled={controlsDisabled} onClick={() => { setDialog('confirm-hand'); }}>
                 New Hand
               </Button>
-              <Button
-                variant="secondary"
-                fullWidth
-                disabled={!canUndo || (isMultiplayer && !isHost)}
-                onClick={() => { setDialog('confirm-undo'); }}
-              >
+              <Button variant="secondary" fullWidth disabled={!canUndo || controlsDisabled} onClick={() => { setDialog('confirm-undo'); }}>
                 Undo
               </Button>
               <Button variant="secondary" fullWidth onClick={() => { setDialog('timeline'); }}>
@@ -366,7 +542,7 @@ export default function Game() {
               subtitle={`${activePlayer.name} · ${activePlayer.chips.toLocaleString()} chips`}
             />
 
-            <button className="action-sheet-item" onClick={() => setSheetView('bet')} type="button">
+            <button className={`action-sheet-item${controlsDisabled ? ' action-sheet-item--disabled' : ''}`} disabled={controlsDisabled} onClick={() => setSheetView('bet')} type="button">
               <span className="action-sheet-item__icon">B</span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Bet (Chaal)</span>
@@ -374,7 +550,7 @@ export default function Game() {
               </div>
             </button>
 
-            <button className="action-sheet-item" onClick={handlePack} type="button">
+            <button className={`action-sheet-item${controlsDisabled ? ' action-sheet-item--disabled' : ''}`} disabled={controlsDisabled} onClick={handlePack} type="button">
               <span className="action-sheet-item__icon action-sheet-item__icon--danger">P</span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Pack (Fold)</span>
@@ -383,8 +559,8 @@ export default function Game() {
             </button>
 
             <button
-              className={`action-sheet-item ${!sideShowAllowed ? 'action-sheet-item--disabled' : ''}`}
-              disabled={!sideShowAllowed}
+              className={`action-sheet-item ${(!sideShowAllowed || controlsDisabled) ? 'action-sheet-item--disabled' : ''}`}
+              disabled={!sideShowAllowed || controlsDisabled}
               onClick={handleRequestSideShow}
               type="button"
             >
@@ -396,8 +572,8 @@ export default function Game() {
             </button>
 
             <button
-              className={`action-sheet-item ${!showAllowed ? 'action-sheet-item--disabled' : ''}`}
-              disabled={!showAllowed}
+              className={`action-sheet-item ${(!showAllowed || controlsDisabled) ? 'action-sheet-item--disabled' : ''}`}
+              disabled={!showAllowed || controlsDisabled}
               onClick={handleRequestShow}
               type="button"
             >
@@ -409,8 +585,8 @@ export default function Game() {
             </button>
 
             <button
-              className={`action-sheet-item ${activePlayer.seen ? 'action-sheet-item--disabled' : ''}`}
-              disabled={activePlayer.seen}
+              className={`action-sheet-item ${(activePlayer.seen || controlsDisabled) ? 'action-sheet-item--disabled' : ''}`}
+              disabled={activePlayer.seen || controlsDisabled}
               onClick={handleSee}
               type="button"
             >
@@ -422,8 +598,8 @@ export default function Game() {
             </button>
 
             <button
-              className={`action-sheet-item ${!canUndo ? 'action-sheet-item--disabled' : ''}`}
-              disabled={!canUndo}
+              className={`action-sheet-item ${(!canUndo || controlsDisabled) ? 'action-sheet-item--disabled' : ''}`}
+              disabled={!canUndo || controlsDisabled}
               onClick={handleUndo}
               type="button"
             >
@@ -459,6 +635,7 @@ export default function Game() {
                 max={activePlayer.chips}
                 placeholder="Enter amount"
                 autoFocus
+                disabled={controlsDisabled}
               />
             </div>
 
@@ -467,6 +644,7 @@ export default function Game() {
                 <Button
                   key={value}
                   variant="secondary"
+                  disabled={controlsDisabled}
                   onClick={() => {
                     const base = Number(betAmount) || 0
                     setBetAmount(String(base + value))
@@ -484,7 +662,7 @@ export default function Game() {
               <Button variant="secondary" fullWidth onClick={() => setSheetView('menu')}>
                 Back
               </Button>
-              <Button variant="primary" fullWidth onClick={handleConfirmBet}>
+              <Button variant="primary" fullWidth disabled={controlsDisabled} onClick={handleConfirmBet}>
                 Confirm Bet
               </Button>
             </div>

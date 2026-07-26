@@ -13,6 +13,7 @@ export class LocalGameController implements GameController {
   private handStartTime = 0
   private handPlayersAtStart: string[] = []
   private undoManager = new UndoManager()
+  private _multiplayer = false
 
   constructor(
     engine: GameEngine,
@@ -22,6 +23,17 @@ export class LocalGameController implements GameController {
     this.engine = engine
     this.persistence = persistence
     this._state = initialState
+  }
+
+  get multiplayer(): boolean {
+    return this._multiplayer
+  }
+
+  setMultiplayer(value: boolean): void {
+    this._multiplayer = value
+    if (value) {
+      this.persistence.clear()
+    }
   }
 
   get state(): GameState {
@@ -41,7 +53,9 @@ export class LocalGameController implements GameController {
     for (const listener of this.listeners) {
       listener()
     }
-    this.persistence.save(this._state)
+    if (!this._multiplayer) {
+      this.persistence.save(this._state)
+    }
   }
 
   startGame(payload: StartGamePayload): void {
@@ -190,6 +204,11 @@ export class LocalGameController implements GameController {
 
   restoreGame(state: GameState): void {
     this.undoManager.clearHistory()
+    this._state = state
+    this.notify()
+  }
+
+  restoreGameState(state: GameState): void {
     this._state = state
     this.notify()
   }
