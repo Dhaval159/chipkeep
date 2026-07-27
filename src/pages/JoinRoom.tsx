@@ -4,7 +4,7 @@ import { useMultiplayer } from '../hooks/useMultiplayer'
 import { getRoomByCode, joinRoom } from '../lib/rooms'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
-import { SectionHeader } from '../components/ui/SectionHeader'
+import { ArrowLeft, LogIn } from 'lucide-react'
 
 export default function JoinRoom() {
   const navigate = useNavigate()
@@ -65,46 +65,53 @@ export default function JoinRoom() {
   }
 
   return (
-    <div className="home-page">
-      <Button variant="secondary" onClick={() => navigate('/')} className="ck-self-start">
-        ← Back
-      </Button>
+    <div className="ck-page ck-page--narrow">
+      <button className="ck-back" onClick={() => navigate('/')} type="button">
+        <ArrowLeft size={16} />
+        Back
+      </button>
 
-      <SectionHeader title="Join Room" subtitle="Enter the room code to join" />
+      <div className="ck-page-header">
+        <h1 className="ck-page-header__title">Join Room</h1>
+        <p className="ck-page-header__subtitle">Enter the room code to join</p>
+      </div>
 
       <div className="room-form">
-        <TextField
-          label="Room Code"
-          value={code}
-          onChange={(e) => handleCodeChange(e.target.value)}
-          placeholder="AB7XKQ"
-          maxLength={6}
-          autoFocus
-          wrapperClassName="room-code-input"
-        />
+        <div className="room-form__card">
+          <TextField
+            label="Room Code"
+            value={code}
+            onChange={(e) => handleCodeChange(e.target.value)}
+            placeholder="AB7XKQ"
+            maxLength={6}
+            autoFocus
+            wrapperClassName="room-code-input"
+          />
 
-        <TextField
-          label="Your Display Name"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-            setError(null)
-          }}
-          placeholder="Enter your name"
-          maxLength={20}
-        />
+          <TextField
+            label="Display Name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError(null)
+            }}
+            placeholder="Enter your name"
+            maxLength={20}
+          />
 
-        {error && <p className="room-error">{error}</p>}
+          {error && <p className="room-error">{error}</p>}
 
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={handleJoin}
-          loading={loading}
-          disabled={loading || !uid || code.length !== 6}
-        >
-          Join Room
-        </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleJoin}
+            loading={loading}
+            disabled={loading || !uid || code.length !== 6}
+          >
+            <LogIn size={18} />
+            Join Room
+          </Button>
+        </div>
       </div>
     </div>
   )

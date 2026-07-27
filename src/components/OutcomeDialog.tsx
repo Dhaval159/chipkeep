@@ -1,51 +1,74 @@
-import type { Player } from '../types/game'
+import { Avatar } from './ui/Avatar'
 import { Button } from './ui/Button'
+import { X } from 'lucide-react'
+
+interface OutcomeOption {
+  id: string
+  name: string
+}
 
 interface OutcomeDialogProps {
   title: string
-  message?: string
-  cost?: number
-  options: Player[]
-  optionLabel: (player: Player) => string
-  onSelect: (playerId: string) => void
+  message: string
+  options: OutcomeOption[]
+  optionLabel: (option: OutcomeOption) => string
+  onSelect: (winnerId: string) => void
   onCancel: () => void
 }
 
-export function OutcomeDialog({
-  title,
-  message,
-  cost,
-  options,
-  optionLabel,
-  onSelect,
-  onCancel,
-}: OutcomeDialogProps) {
+export function OutcomeDialog({ title, message, options, optionLabel, onSelect, onCancel }: OutcomeDialogProps) {
   return (
-    <div className="modal-overlay" onClick={onCancel} role="presentation">
+    <div className="ck-dialog-overlay" onClick={onCancel} role="presentation">
       <div
-        className="modal"
+        className="ck-dialog"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <h2 className="modal__title">{title}</h2>
-        {message && <p className="subtitle">{message}</p>}
-        {cost !== undefined && cost > 0 && (
-          <p className="subtitle">Cost added to pot: {cost.toLocaleString()}</p>
-        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="ck-dialog__title">{title}</h2>
+          <button
+            onClick={onCancel}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+            }}
+            type="button"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <p className="ck-dialog__description">{message}</p>
 
-        <div className="bet-actions">
-          {options.map((player) => (
-            <Button
-              key={player.id}
-              variant="primary"
-              fullWidth
-              onClick={() => onSelect(player.id)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-10)' }}>
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="endhand-standing-card"
+              style={{ cursor: 'pointer', width: '100%', textAlign: 'left' }}
+              onClick={() => onSelect(option.id)}
             >
-              {optionLabel(player)}
-            </Button>
+              <Avatar name={option.name} size="md" />
+              <div className="endhand-standing-card__info">
+                <span className="endhand-standing-card__name">
+                  {optionLabel(option)}
+                </span>
+              </div>
+            </button>
           ))}
-          <Button variant="secondary" fullWidth onClick={onCancel}>
+        </div>
+
+        <div className="ck-dialog__actions">
+          <Button variant="ghost" fullWidth onClick={onCancel}>
             Cancel
           </Button>
         </div>

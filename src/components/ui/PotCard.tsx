@@ -1,33 +1,21 @@
-import { ChipCounter } from './ChipCounter'
+import type { ReactNode } from 'react'
 
 interface PotCardProps {
-  pot: number
-  stake: number
-  handNumber: number
-  activeCount?: number
-  dealerName?: string
+  label: string
+  value: string
+  unit?: string
+  children?: ReactNode
 }
 
-export function PotCard({
-  pot,
-  stake,
-  handNumber,
-  activeCount,
-  dealerName,
-}: PotCardProps) {
+export function PotCard({ label, value, unit, children }: PotCardProps) {
   return (
     <div className="ck-pot-card">
-      <span className="ck-pot-card__label">Current Pot</span>
-      <ChipCounter value={pot} />
-      <span className="ck-pot-card__unit">Chips</span>
-      <div className="ck-pot-card__meta">
-        <span>Stake {stake.toLocaleString()}</span>
-        {activeCount !== undefined && <span>Active {activeCount}</span>}
+      <span className="ck-pot-card__label">{label}</span>
+      <div className="ck-chip-counter">
+        <span className="ck-chip-counter__value">{value}</span>
       </div>
-      <div className="ck-pot-card__meta">
-        <span>Hand #{handNumber || '—'}</span>
-        {dealerName && <span>Dealer: {dealerName}</span>}
-      </div>
+      {unit && <span className="ck-pot-card__unit">{unit}</span>}
+      {children && <div className="ck-pot-card__meta">{children}</div>}
     </div>
   )
 }

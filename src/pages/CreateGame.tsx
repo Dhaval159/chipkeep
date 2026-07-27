@@ -6,8 +6,8 @@ import { hasSavedGame, clearSavedGame } from '../utils/storage'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
 import { Dialog } from '../components/ui/Dialog'
-import { SectionHeader } from '../components/ui/SectionHeader'
 import { Avatar } from '../components/ui/Avatar'
+import { ArrowLeft, Play, Plus, Trash2 } from 'lucide-react'
 
 const STARTING_CHIPS_PRESETS = [
   { value: '5000', label: '₹5,000' },
@@ -49,9 +49,7 @@ export default function CreateGame() {
     setModalOpen(true)
   }
 
-  const closeModal = () => {
-    setModalOpen(false)
-  }
+  const closeModal = () => setModalOpen(false)
 
   const handleAddPlayer = () => {
     const trimmed = playerName.trim()
@@ -74,7 +72,6 @@ export default function CreateGame() {
     setPlayers((prev) => {
       const next = [...prev, trimmed]
       setRecentlyAdded((s) => new Set(s).add(next.length - 1))
-      // Clear the animation flag after the slide-in completes
       setTimeout(() => {
         setRecentlyAdded((s) => {
           const next2 = new Set(s)
@@ -113,16 +110,12 @@ export default function CreateGame() {
   }
 
   const handleStartGame = () => {
-    if (players.length < 2) {
-      return
-    }
+    if (players.length < 2) return
 
     const resolvedChips =
       startingChips === 'custom' ? Number(customChips) : Number(startingChips)
 
-    if (!Number.isFinite(resolvedChips) || resolvedChips < 1) {
-      return
-    }
+    if (!Number.isFinite(resolvedChips) || resolvedChips < 1) return
 
     if (hasSavedGame()) {
       setConfirmNewGame(true)
@@ -133,90 +126,84 @@ export default function CreateGame() {
   }
 
   return (
-    <div className="home-container">
-      <Button
-        variant="secondary"
-        onClick={() => navigate('/')}
-        className="ck-self-start"
-      >
-        ← Back
-      </Button>
+    <div className="ck-page ck-page--narrow" style={{ gap: 'var(--space-20)' }}>
+      <button className="ck-back" onClick={() => navigate('/')} type="button">
+        <ArrowLeft size={16} />
+        Back
+      </button>
 
-      <SectionHeader title="Create Game" subtitle="Set up your table" />
-
-      {/* ── Game Settings ── */}
-      <SectionHeader title="Game Settings" />
-
-      {/* Starting Chips */}
-      <div className="ck-full-width">
-        <span className="ck-chip-preset-label" id="starting-chips-label">
-          Starting Chips
-        </span>
-        <div className="ck-chip-presets" role="group" aria-labelledby="starting-chips-label">
-          {STARTING_CHIPS_PRESETS.map((preset) => (
-            <button
-              key={preset.value}
-              type="button"
-              className={`ck-chip-preset${startingChips === preset.value ? ' ck-chip-preset--active' : ''}`}
-              aria-pressed={startingChips === preset.value}
-              onClick={() => setStartingChips(preset.value)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        {startingChips === 'custom' && (
-          <div className="ck-mt-sm">
-            <TextField
-              label="Custom Amount"
-              type="number"
-              min="1"
-              value={customChips}
-              onChange={(e) => setCustomChips(e.target.value)}
-              placeholder="Enter amount"
-            />
-          </div>
-        )}
+      <div className="ck-page-header">
+        <h1 className="ck-page-header__title">Create Game</h1>
+        <p className="ck-page-header__subtitle">Set up your table</p>
       </div>
 
-      {/* Boot Amount */}
-      <div className="ck-full-width">
-        <span className="ck-chip-preset-label" id="boot-amount-label">
-          Boot Amount
-        </span>
-        <div className="ck-chip-presets" role="group" aria-labelledby="boot-amount-label">
-          {BOOT_AMOUNT_PRESETS.map((preset) => (
-            <button
-              key={preset.value}
-              type="button"
-              className={`ck-chip-preset${bootAmount === preset.value ? ' ck-chip-preset--active' : ''}`}
-              aria-pressed={bootAmount === preset.value}
-              onClick={() => setBootAmount(preset.value)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        {bootAmount === 'custom' && (
-          <div className="ck-mt-sm">
-            <TextField
-              label="Custom Boot"
-              type="number"
-              min="1"
-              value={customBoot}
-              onChange={(e) => setCustomBoot(e.target.value)}
-              placeholder="Enter amount"
-            />
+      <div className="room-form__card">
+        <div className="ck-full-width">
+          <span className="ck-chip-label" id="starting-chips-label">Starting Chips</span>
+          <div className="ck-chip-presets" role="group" aria-labelledby="starting-chips-label">
+            {STARTING_CHIPS_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                className={`ck-chip-preset${startingChips === preset.value ? ' ck-chip-preset--active' : ''}`}
+                aria-pressed={startingChips === preset.value}
+                onClick={() => setStartingChips(preset.value)}
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
-        )}
-        <p className="ck-chip-helper">
-          Every player contributes this amount at the beginning of each hand.
-        </p>
+          {startingChips === 'custom' && (
+            <div className="ck-mt-sm">
+              <TextField
+                label="Custom Amount"
+                type="number"
+                min="1"
+                value={customChips}
+                onChange={(e) => setCustomChips(e.target.value)}
+                placeholder="Enter amount"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="ck-full-width">
+          <span className="ck-chip-label" id="boot-amount-label">Boot Amount</span>
+          <div className="ck-chip-presets" role="group" aria-labelledby="boot-amount-label">
+            {BOOT_AMOUNT_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                type="button"
+                className={`ck-chip-preset${bootAmount === preset.value ? ' ck-chip-preset--active' : ''}`}
+                aria-pressed={bootAmount === preset.value}
+                onClick={() => setBootAmount(preset.value)}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          {bootAmount === 'custom' && (
+            <div className="ck-mt-sm">
+              <TextField
+                label="Custom Boot"
+                type="number"
+                min="1"
+                value={customBoot}
+                onChange={(e) => setCustomBoot(e.target.value)}
+                placeholder="Enter amount"
+              />
+            </div>
+          )}
+          <p className="ck-chip-helper">
+            Every player contributes this amount at the beginning of each hand.
+          </p>
+        </div>
       </div>
 
-      {/* ── Players ── */}
       <div className="ck-full-width">
-        <SectionHeader title="Players" />
+        <div className="home-section__header">
+          <h2 className="home-section__title">Players</h2>
+        </div>
 
         <div
           className={
@@ -227,19 +214,13 @@ export default function CreateGame() {
           aria-label="Player list"
         >
           {players.length === 0 && (
-            <span className="ck-create-empty">
-              No players added yet
-            </span>
+            <span className="ck-create-empty">No players added yet</span>
           )}
 
           {players.map((name, index) => (
             <div
               key={`${name}-${index}`}
-              className={`ck-player-card ck-player-card--compact${
-                recentlyAdded.has(index) ? ' ck-player-card--animate' : ''
-              }${
-                removingIndex === index ? ' ck-player-card--removing' : ''
-              }`}
+              className={`ck-player-card ck-player-card--compact${recentlyAdded.has(index) ? ' ck-player-card--animate' : ''}${removingIndex === index ? ' ck-player-card--removing' : ''}`}
             >
               <Avatar name={name} size="sm" />
               <div className="ck-player-card__info">
@@ -251,19 +232,7 @@ export default function CreateGame() {
                 onClick={() => handleDeletePlayer(index)}
                 aria-label={`Remove ${name}`}
               >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
+                <Trash2 size={16} />
               </button>
             </div>
           ))}
@@ -271,19 +240,16 @@ export default function CreateGame() {
 
         <div className="ck-mt-sm">
           <Button variant="secondary" fullWidth onClick={openModal}>
-            + Add Player
+            <Plus size={18} />
+            Add Player
           </Button>
         </div>
       </div>
 
-      {/* ── Validation Hint ── */}
       {players.length > 0 && players.length < 2 && (
-        <p className="ck-validation-hint">
-          Add at least 2 players to create a table
-        </p>
+        <p className="ck-validation-hint">Add at least 2 players to create a table</p>
       )}
 
-      {/* ── Sticky Bottom ── */}
       <div className="ck-create-bottom">
         <Button
           variant="primary"
@@ -291,11 +257,11 @@ export default function CreateGame() {
           disabled={players.length < 2}
           onClick={handleStartGame}
         >
+          <Play size={18} />
           Create Table
         </Button>
       </div>
 
-      {/* ── Add Player Dialog ── */}
       <Dialog
         open={modalOpen}
         title="Add Player"
@@ -318,7 +284,6 @@ export default function CreateGame() {
         />
       </Dialog>
 
-      {/* ── Confirm New Game Dialog ── */}
       <Dialog
         open={confirmNewGame}
         title="Start New Game?"

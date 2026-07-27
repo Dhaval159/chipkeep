@@ -1,27 +1,32 @@
 import type { InputHTMLAttributes } from 'react'
 
-interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
-  label?: string
+interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  label: string
   error?: string | null
+  hint?: string
   wrapperClassName?: string
 }
 
-export function TextField({ label, error, id, wrapperClassName, ...rest }: TextFieldProps) {
-  const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-')
-
+export function TextField({
+  label,
+  error,
+  hint,
+  wrapperClassName = '',
+  className = '',
+  ...rest
+}: TextFieldProps) {
   return (
-    <div className={`ck-text-field ${wrapperClassName ?? ''}`.trim()}>
-      {label && (
-        <label className="ck-text-field__label" htmlFor={inputId}>
-          {label}
-        </label>
-      )}
+    <div className={`ck-text-field ${wrapperClassName}`}>
+      <label className="ck-text-field__label" htmlFor={rest.id ?? rest.name}>
+        {label}
+      </label>
       <input
-        id={inputId}
-        className="ck-text-field__input"
+        className={`ck-text-field__input${error ? ' ck-text-field__input--error' : ''} ${className}`}
+        id={rest.id ?? rest.name}
         {...rest}
       />
       {error && <span className="ck-text-field__error">{error}</span>}
+      {hint && !error && <span className="ck-text-field__hint">{hint}</span>}
     </div>
   )
 }

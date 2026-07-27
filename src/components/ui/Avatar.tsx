@@ -1,15 +1,18 @@
-type AvatarSize = 'sm' | 'md' | 'lg' | 'xl'
+import type { HTMLAttributes } from 'react'
 
-interface AvatarProps {
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+
+interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   name: string
   size?: AvatarSize
-  className?: string
+  ring?: boolean
+  winnerRing?: boolean
 }
 
 const AVATAR_COLORS = [
-  '#2563EB', '#7C3AED', '#EC4899', '#EF4444',
-  '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6',
-  '#F97316', '#14B8A6', '#6366F1', '#D946EF',
+  '#7C5CFC', '#38BDF8', '#34D399', '#F87171',
+  '#FBBF24', '#A78BFA', '#FB923C', '#2DD4BF',
+  '#818CF8', '#F472B6', '#E879F9', '#22D3EE',
 ]
 
 function hashName(name: string): number {
@@ -29,23 +32,33 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-function getAvatarColor(name: string): string {
-  const index = hashName(name) % AVATAR_COLORS.length
-  return AVATAR_COLORS[index]
-}
-
-export function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
-  const color = getAvatarColor(name)
-  const initials = getInitials(name)
+export function Avatar({
+  name,
+  size = 'md',
+  ring = false,
+  winnerRing = false,
+  className = '',
+  ...rest
+}: AvatarProps) {
+  const colorIndex = hashName(name) % AVATAR_COLORS.length
+  const classes = [
+    'ck-avatar',
+    `ck-avatar--${size}`,
+    ring ? 'ck-avatar--ring' : '',
+    winnerRing ? 'ck-avatar--winner-ring' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div
-      className={`ck-avatar ck-avatar--${size} ${className}`}
-      style={{ background: color }}
+      className={classes}
+      style={{ background: AVATAR_COLORS[colorIndex] }}
       aria-label={name}
-      role="img"
+      {...rest}
     >
-      {initials}
+      {getInitials(name)}
     </div>
   )
 }

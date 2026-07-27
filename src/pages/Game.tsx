@@ -17,6 +17,15 @@ import {
   getNextActiveIndex,
 } from '../utils/turn'
 import { validateBet } from '../utils/betting'
+import {
+  Eye,
+  Hand,
+  Swords,
+  FoldHorizontal,
+  Undo2,
+  Plus,
+  Wallet,
+} from 'lucide-react'
 
 type DialogState = 'none' | 'confirm-hand' | 'confirm-undo' | 'side-show' | 'show' | 'timeline' | 'menu'
 type SheetView = 'closed' | 'menu' | 'bet'
@@ -209,7 +218,7 @@ export default function Game() {
         <div className="game-page">
           <GameHeader title="ChipKeep" subtitle="Loading Game..." onBack={() => navigate('/')} />
           <div className="game-empty">
-            <div className="ck-btn__spinner" />
+            <div className="ck-spinner ck-spinner--primary ck-spinner--lg" />
             <p className="game-empty__text" style={{ marginTop: 16 }}>Waiting for game state...</p>
           </div>
         </div>
@@ -217,11 +226,7 @@ export default function Game() {
     }
     return (
       <div className="game-page">
-        <GameHeader
-          title="ChipKeep"
-          subtitle="No Game"
-          onBack={() => navigate('/')}
-        />
+        <GameHeader title="ChipKeep" subtitle="No Game" onBack={() => navigate('/')} />
         <div className="game-empty">
           <p className="game-empty__text">No game in progress. Start a new game to begin.</p>
           <Button variant="primary" fullWidth onClick={() => navigate('/create')}>
@@ -236,7 +241,7 @@ export default function Game() {
     <div className="game-page">
       <GameHeader
         title="ChipKeep"
-        subtitle={handNumber > 0 ? `Current Hand #${handNumber}` : 'Game Setup'}
+        subtitle={handNumber > 0 ? `Hand #${handNumber}` : 'Game Setup'}
         onBack={() => navigate('/')}
         onMenu={() => setDialog('menu')}
       />
@@ -262,13 +267,13 @@ export default function Game() {
 
           <div className="game-pot-center">
             <div className="game-pot-card">
-              <span className="game-pot-card__label">Current Pot</span>
+              <span className="game-pot-card__label">Pot</span>
               <span className={`game-pot-card__amount${potPop ? ' game-pot-card__amount--pop' : ''}`}>
                 ₹{pot.toLocaleString()}
               </span>
               <div className="game-pot-card__divider" />
               <div className="game-pot-card__meta-row">
-                <span className="game-pot-card__meta-label">Current Stake</span>
+                <span className="game-pot-card__meta-label">Stake</span>
                 <span className="game-pot-card__meta-value">
                   ₹{currentStake.toLocaleString()}
                 </span>
@@ -291,6 +296,7 @@ export default function Game() {
           type="button"
           disabled={controlsDisabled}
         >
+          <Wallet size={18} />
           {isMultiplayer && !isCurrentPlayerTurn ? `Waiting for ${activePlayer.name}...` : 'Take Turn'}
         </button>
       )}
@@ -320,7 +326,7 @@ export default function Game() {
       {dialog === 'side-show' && activePlayer && sideShowOpponent && (
         <OutcomeDialog
           title={`Side Show: ${activePlayer.name} vs ${sideShowOpponent.name}`}
-          message="Select the winner. The loser will pack. No chips are added to the pot."
+          message="Select the winner. The loser will pack."
           options={[activePlayer, sideShowOpponent]}
           optionLabel={(p) =>
             p.id === activePlayer.id
@@ -354,26 +360,28 @@ export default function Game() {
       )}
 
       {dialog === 'menu' && (
-        <div className="modal-overlay" onClick={closeDialog} role="presentation">
+        <div className="game-menu-overlay" onClick={closeDialog} role="presentation">
           <div
-            className="modal"
+            className="game-menu"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <h2 className="modal__title">Game Menu</h2>
-
-            <div className="bet-actions">
+            <h2 className="game-menu__title">Game Menu</h2>
+            <div className="game-menu__actions">
               <Button variant="primary" fullWidth disabled={controlsDisabled} onClick={() => { setDialog('confirm-hand'); }}>
+                <Hand size={18} />
                 New Hand
               </Button>
               <Button variant="secondary" fullWidth disabled={!canUndo || controlsDisabled} onClick={() => { setDialog('confirm-undo'); }}>
+                <Undo2 size={18} />
                 Undo
               </Button>
               <Button variant="secondary" fullWidth onClick={() => { setDialog('timeline'); }}>
+                <Eye size={18} />
                 Timeline
               </Button>
-              <Button variant="secondary" fullWidth onClick={closeDialog}>
+              <Button variant="ghost" fullWidth onClick={closeDialog}>
                 Cancel
               </Button>
             </div>
@@ -399,11 +407,13 @@ export default function Game() {
           <div className="action-sheet-list">
             <SectionHeader
               title="Choose Action"
-              subtitle={`${activePlayer.name} · ${activePlayer.chips.toLocaleString()} chips`}
+              subtitle={`${activePlayer.name} · ₹${activePlayer.chips.toLocaleString()}`}
             />
 
             <button className={`action-sheet-item${controlsDisabled ? ' action-sheet-item--disabled' : ''}`} disabled={controlsDisabled} onClick={() => setSheetView('bet')} type="button">
-              <span className="action-sheet-item__icon">B</span>
+              <span className="action-sheet-item__icon">
+                <Wallet size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Bet (Chaal)</span>
                 <span className="action-sheet-item__desc">Place a wager to stay in the hand</span>
@@ -411,7 +421,9 @@ export default function Game() {
             </button>
 
             <button className={`action-sheet-item${controlsDisabled ? ' action-sheet-item--disabled' : ''}`} disabled={controlsDisabled} onClick={handlePack} type="button">
-              <span className="action-sheet-item__icon action-sheet-item__icon--danger">P</span>
+              <span className="action-sheet-item__icon action-sheet-item__icon--danger">
+                <FoldHorizontal size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Pack (Fold)</span>
                 <span className="action-sheet-item__desc">Fold your hand and exit</span>
@@ -424,10 +436,12 @@ export default function Game() {
               onClick={handleRequestSideShow}
               type="button"
             >
-              <span className="action-sheet-item__icon">S</span>
+              <span className="action-sheet-item__icon action-sheet-item__icon--warning">
+                <Swords size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Side Show</span>
-                <span className="action-sheet-item__desc">{sideShowDisabledReason ?? 'Challenge a seen player to compare cards'}</span>
+                <span className="action-sheet-item__desc">{sideShowDisabledReason ?? 'Challenge a seen player'}</span>
               </div>
             </button>
 
@@ -437,10 +451,12 @@ export default function Game() {
               onClick={handleRequestShow}
               type="button"
             >
-              <span className="action-sheet-item__icon">W</span>
+              <span className="action-sheet-item__icon action-sheet-item__icon--success">
+                <Eye size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Show</span>
-                <span className="action-sheet-item__desc">Reveal cards against the last active player</span>
+                <span className="action-sheet-item__desc">Reveal cards against the last player</span>
               </div>
             </button>
 
@@ -450,7 +466,9 @@ export default function Game() {
               onClick={handleSee}
               type="button"
             >
-              <span className="action-sheet-item__icon">E</span>
+              <span className="action-sheet-item__icon">
+                <Eye size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">See Cards</span>
                 <span className="action-sheet-item__desc">Look at your cards (Blind → Seen)</span>
@@ -463,14 +481,16 @@ export default function Game() {
               onClick={handleUndo}
               type="button"
             >
-              <span className="action-sheet-item__icon">U</span>
+              <span className="action-sheet-item__icon">
+                <Undo2 size={20} />
+              </span>
               <div className="action-sheet-item__content">
                 <span className="action-sheet-item__title">Undo</span>
-                <span className="action-sheet-item__desc">Undo the last action taken</span>
+                <span className="action-sheet-item__desc">Undo the last action</span>
               </div>
             </button>
 
-            <Button variant="secondary" fullWidth onClick={closeSheet}>
+            <Button variant="ghost" fullWidth onClick={closeSheet}>
               Cancel
             </Button>
           </div>
@@ -511,7 +531,8 @@ export default function Game() {
                     setBetError(null)
                   }}
                 >
-                  +{value}
+                  <Plus size={14} />
+                  {value}
                 </Button>
               ))}
             </div>

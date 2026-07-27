@@ -4,7 +4,7 @@ import { useMultiplayer } from '../hooks/useMultiplayer'
 import { createRoom } from '../lib/rooms'
 import { Button } from '../components/ui/Button'
 import { TextField } from '../components/ui/TextField'
-import { SectionHeader } from '../components/ui/SectionHeader'
+import { ArrowLeft, Users } from 'lucide-react'
 
 export default function CreateRoom() {
   const navigate = useNavigate()
@@ -41,37 +41,44 @@ export default function CreateRoom() {
   }
 
   return (
-    <div className="home-page">
-      <Button variant="secondary" onClick={() => navigate('/')} className="ck-self-start">
-        ← Back
-      </Button>
+    <div className="ck-page ck-page--narrow">
+      <button className="ck-back" onClick={() => navigate('/')} type="button">
+        <ArrowLeft size={16} />
+        Back
+      </button>
 
-      <SectionHeader title="Create Room" subtitle="Set up a multiplayer game" />
+      <div className="ck-page-header">
+        <h1 className="ck-page-header__title">Create Room</h1>
+        <p className="ck-page-header__subtitle">Set up a multiplayer game</p>
+      </div>
 
       <div className="room-form">
-        <TextField
-          label="Your Display Name"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value)
-            setError(null)
-          }}
-          placeholder="Enter your name"
-          autoFocus
-          maxLength={20}
-        />
+        <div className="room-form__card">
+          <TextField
+            label="Display Name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError(null)
+            }}
+            placeholder="Enter your name"
+            autoFocus
+            maxLength={20}
+          />
 
-        {error && <p className="room-error">{error}</p>}
+          {error && <p className="room-error">{error}</p>}
 
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={handleCreate}
-          loading={loading}
-          disabled={loading || !uid}
-        >
-          Create Room
-        </Button>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleCreate}
+            loading={loading}
+            disabled={loading || !uid}
+          >
+            <Users size={18} />
+            Create Room
+          </Button>
+        </div>
       </div>
     </div>
   )

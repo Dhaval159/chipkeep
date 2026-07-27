@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Player } from '../types/game'
 import { timeline } from '../utils/timeline'
-import { PartyPopper, Trophy, Clock, Wallet, ArrowUpDown, Users, UserCheck, CircleDollarSign } from 'lucide-react'
+import { PartyPopper, Trophy, Clock, Wallet, Users, UserCheck, CircleDollarSign, Eye, ArrowRight } from 'lucide-react'
 import { Avatar } from './ui/Avatar'
 
 interface EndHandSummaryProps {
@@ -70,7 +70,7 @@ function WinnerCard({ winner, potWon }: { winner: Player | null; potWon: number 
 
       {winner && (
         <div className="endhand-winner-card__total">
-          <span className="endhand-winner-card__total-label">Current Total Chips</span>
+          <span className="endhand-winner-card__total-label">Total Chips</span>
           <span className="endhand-winner-card__total-value">₹{winner.chips.toLocaleString()}</span>
         </div>
       )}
@@ -169,13 +169,12 @@ export function EndHandSummary({
   return (
     <div className="endhand-overlay">
       <div className="endhand-page">
-
         <div className="endhand-header">
           <div className="endhand-header__icon">
             <PartyPopper size={28} />
           </div>
           <h1 className="endhand-header__title">Hand #{handNumber} Complete</h1>
-          <p className="endhand-header__subtitle">Round finished successfully</p>
+          <p className="endhand-header__subtitle">Round finished</p>
         </div>
 
         <WinnerCard winner={winner} potWon={potWon} />
@@ -183,17 +182,17 @@ export function EndHandSummary({
         <section className="endhand-section">
           <h2 className="endhand-section__title">Game Summary</h2>
           <div className="endhand-summary-grid">
-            <SummaryCard icon={<Clock size={20} />} label="Hand Duration" value={duration} />
-            <SummaryCard icon={<Wallet size={20} />} label="Current Pot" value={`₹${potWon.toLocaleString()}`} />
-            <SummaryCard icon={<ArrowUpDown size={20} />} label="Total Bets" value={`₹${potWon.toLocaleString()}`} />
-            <SummaryCard icon={<Users size={20} />} label="Players Remaining" value={String(playersRemaining)} />
+            <SummaryCard icon={<Clock size={20} />} label="Duration" value={duration} />
+            <SummaryCard icon={<Wallet size={20} />} label="Pot" value={`₹${potWon.toLocaleString()}`} />
+            <SummaryCard icon={<CircleDollarSign size={20} />} label="Stake" value={`₹${currentStake.toLocaleString()}`} />
+            <SummaryCard icon={<Users size={20} />} label="Remaining" value={String(playersRemaining)} />
             <SummaryCard icon={<UserCheck size={20} />} label="Dealer" value={dealerName} />
-            <SummaryCard icon={<CircleDollarSign size={20} />} label="Current Boot Amount" value={`₹${currentStake.toLocaleString()}`} />
+            <SummaryCard icon={<Trophy size={20} />} label="Total Hands" value={String(completedHands.length)} />
           </div>
         </section>
 
         <section className="endhand-section endhand-section--standings">
-          <h2 className="endhand-section__title">Player Standings</h2>
+          <h2 className="endhand-section__title">Standings</h2>
           <div className="endhand-standings-list">
             {players.map((player) => (
               <PlayerStandingCard
@@ -212,9 +211,11 @@ export function EndHandSummary({
 
       <div className="endhand-bottom-bar">
         <button className="endhand-bottom-bar__primary" onClick={onNextHand} type="button">
-          Start Next Hand
+          <ArrowRight size={18} />
+          Next Hand
         </button>
         <button className="endhand-bottom-bar__secondary" onClick={onReturn} type="button">
+          <Eye size={18} />
           Return to Table
         </button>
         <button className="endhand-bottom-bar__text" onClick={onViewHistory} type="button">

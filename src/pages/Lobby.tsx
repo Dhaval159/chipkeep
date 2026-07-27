@@ -8,7 +8,7 @@ import { GameEngineImpl } from '../engine/GameEngine'
 import { clearSavedGame } from '../utils/storage'
 import { Button } from '../components/ui/Button'
 import { Avatar } from '../components/ui/Avatar'
-import { Copy, Check, LogOut, Play, Users } from 'lucide-react'
+import { Copy, Check, LogOut, Play, Users, ArrowLeft } from 'lucide-react'
 
 const DEFAULT_STARTING_CHIPS = 10000
 const engine = new GameEngineImpl()
@@ -34,9 +34,7 @@ export default function Lobby() {
   }, [uid])
 
   useEffect(() => {
-    if (!roomId) {
-      return
-    }
+    if (!roomId) return
 
     const unsub = subscribeToRoom(roomId, (updatedRoom) => {
       if (updatedRoom) {
@@ -108,9 +106,7 @@ export default function Lobby() {
     setLeaving(true)
     try {
       await leaveRoom(roomId, uid)
-    } catch {
-      /* ok */
-    }
+    } catch { /* ok */ }
     setCurrentRoom(null)
     navigate('/', { replace: true })
   }
@@ -151,9 +147,9 @@ export default function Lobby() {
 
   if (loading) {
     return (
-      <div className="home-page">
+      <div className="ck-page ck-page--narrow">
         <div className="lobby-loading">
-          <div className="ck-btn__spinner" />
+          <div className="ck-spinner ck-spinner--primary ck-spinner--lg" />
           <p>Loading room...</p>
         </div>
       </div>
@@ -162,7 +158,7 @@ export default function Lobby() {
 
   if (error || !room) {
     return (
-      <div className="home-page">
+      <div className="ck-page ck-page--narrow">
         <div className="lobby-error">
           <p>{error ?? 'Room not found'}</p>
           <Button variant="primary" fullWidth onClick={() => navigate('/')}>
@@ -174,7 +170,12 @@ export default function Lobby() {
   }
 
   return (
-    <div className="home-page">
+    <div className="ck-page ck-page--narrow">
+      <button className="ck-back" onClick={handleLeave} type="button">
+        <ArrowLeft size={16} />
+        Leave
+      </button>
+
       <div className="lobby-page">
         <div className="lobby-header">
           <div className="lobby-room-code-section">
@@ -193,15 +194,13 @@ export default function Lobby() {
           </div>
 
           <div className="lobby-status-section">
-            <div className="lobby-status-badge lobby-status-badge--waiting">
+            <span className={`lobby-status-badge ${room.status === 'waiting' ? 'lobby-status-badge--waiting' : 'lobby-status-badge--playing'}`}>
               {room.status === 'waiting' ? 'Waiting for Players' : 'Game Started'}
-            </div>
-            <div className="lobby-player-count">
+            </span>
+            <span className="lobby-player-count">
               <Users size={16} />
-              <span>
-                {onlineCount} / {playerList.length} online
-              </span>
-            </div>
+              {onlineCount} / {playerList.length} online
+            </span>
           </div>
         </div>
 
@@ -211,41 +210,22 @@ export default function Lobby() {
             {playerList.map((player) => (
               <div
                 key={player.key}
-                className={`lobby-player-card${
-                  !player.isConnected ? ' lobby-player-card--disconnected' : ''
-                }`}
+                className={`lobby-player-card${!player.isConnected ? ' lobby-player-card--disconnected' : ''}`}
               >
                 <Avatar name={player.displayName} size="md" />
                 <div className="lobby-player-card__info">
                   <div className="lobby-player-card__name-row">
-                    <span className="lobby-player-card__name">
-                      {player.displayName}
-                    </span>
-                    {player.isHost && (
-                      <span className="lobby-player-card__host-badge">Host</span>
-                    )}
+                    <span className="lobby-player-card__name">{player.displayName}</span>
+                    {player.isHost && <span className="lobby-player-card__host-badge">Host</span>}
                   </div>
                   <div className="lobby-player-card__meta">
-                    <span
-                      className={`lobby-player-card__status${
-                        player.isConnected
-                          ? ' lobby-player-card__status--online'
-                          : ' lobby-player-card__status--offline'
-                      }`}
-                    >
+                    <span className={`lobby-player-card__status${player.isConnected ? ' lobby-player-card__status--online' : ' lobby-player-card__status--offline'}`}>
                       {player.isConnected ? 'Connected' : 'Disconnected'}
                     </span>
-                    {player.playerId === uid && (
-                      <span className="lobby-player-card__you">You</span>
-                    )}
+                    {player.playerId === uid && <span className="lobby-player-card__you">You</span>}
                   </div>
                 </div>
-                {!player.isConnected && (
-                  <div className="lobby-player-card__status-dot lobby-player-card__status-dot--offline" />
-                )}
-                {player.isConnected && (
-                  <div className="lobby-player-card__status-dot lobby-player-card__status-dot--online" />
-                )}
+                <div className={`lobby-player-card__status-dot ${player.isConnected ? 'lobby-player-card__status-dot--online' : 'lobby-player-card__status-dot--offline'}`} />
               </div>
             ))}
           </div>
@@ -266,7 +246,10 @@ export default function Lobby() {
           )}
           {!isHost && room.status === 'waiting' && (
             <div className="lobby-waiting-host">
-              <p>Waiting for host to start the game...</p>
+              <p>Waiting for host to start</p>
+              <div className="ck-waiting-dots">
+                <span /><span /><span />
+              </div>
             </div>
           )}
           {room.status === 'playing' && (

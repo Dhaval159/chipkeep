@@ -10,9 +10,9 @@ interface TablePlayerCardProps {
 }
 
 const AVATAR_COLORS = [
-  '#2563EB', '#7C3AED', '#EC4899', '#EF4444',
-  '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6',
-  '#F97316', '#14B8A6', '#6366F1', '#D946EF',
+  '#7C5CFC', '#38BDF8', '#34D399', '#F87171',
+  '#FBBF24', '#A78BFA', '#FB923C', '#2DD4BF',
+  '#818CF8', '#34D399', '#F472B6', '#A78BFA',
 ]
 
 function hashName(name: string): number {
@@ -40,7 +40,7 @@ function getAvatarColor(name: string): string {
 function getStatusLabel(player: Player): string {
   if (player.status === 'folded') return 'Folded'
   if (player.status === 'out') return 'Out'
-  return player.status === 'active' ? 'Active' : 'Thinking'
+  return player.status === 'active' ? 'Thinking' : 'Waiting'
 }
 
 function getStatusClass(status: string, isWinner: boolean): string {
