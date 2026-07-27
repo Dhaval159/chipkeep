@@ -44,8 +44,10 @@ export default function Game() {
   const stateLoadedRef = useRef(false)
 
   const [isHost, setIsHost] = useState(false)
+  const [isCurrentPlayerTurn, setIsCurrentPlayerTurn] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const isHostRef = useRef(false)
+  const isCurrentPlayerTurnRef = useRef(false)
   const hostIdRef = useRef<string | null>(null)
   const gameRef = useRef(game)
   const { uid } = useMultiplayer()
@@ -54,6 +56,7 @@ export default function Game() {
 
   useEffect(() => { uidRef.current = uid }, [uid])
   useEffect(() => { gameRef.current = game }, [game])
+  useEffect(() => { isCurrentPlayerTurnRef.current = isCurrentPlayerTurn }, [isCurrentPlayerTurn])
 
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const syncInProgressRef = useRef(false)
@@ -67,7 +70,8 @@ export default function Game() {
     return idx >= 0 ? players[idx] : undefined
   }, [players])
 
-  const controlsDisabled = isMultiplayer ? (!isHost || syncing) : false
+  // Turn ownership: in multiplayer, only the player whose turn it is can act
+  const controlsDisabled = isMultiplayer ? (!isCurrentPlayerTurn || syncing) : false
 
   useEffect(() => {
     return () => {
@@ -163,6 +167,16 @@ export default function Game() {
     }
   }, [roomId, restoreGame, restoreGameState])
 
+  // Determine if current player's turn based on game state
+  useEffect(() => {
+    if (!isMultiplayer || !uid) {
+      setIsCurrentPlayerTurn(true)
+      return
+    }
+    const active = players.find((p) => p.status === 'active')
+    setIsCurrentPlayerTurn(active?.id === uid)
+  }, [players, uid, isMultiplayer])
+
   const hostExecute = useCallback(
     (action: () => void) => {
       if (!isMultiplayer) {
@@ -187,7 +201,7 @@ export default function Game() {
 
   const handleSee = () => {
     if (!activePlayer) return
-    if (isMultiplayer && !isHost) return
+    if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
     hostExecute(() => {
       dispatchAction({ type: 'SEE_CARDS', playerId: activePlayer.id })
       closeSheet()
@@ -196,7 +210,7 @@ export default function Game() {
 
   const handleBet = (amount: number) => {
     if (!activePlayer) return
-    if (isMultiplayer && !isHost) return
+    if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
     hostExecute(() => {
       dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
       closeSheet()
@@ -205,7 +219,7 @@ export default function Game() {
 
   const handlePack = () => {
     if (!activePlayer) return
-    if (isMultiplayer && !isHost) return
+    if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
     hostExecute(() => {
       setLastStake(currentStake)
       dispatchAction({ type: 'PACK', playerId: activePlayer.id })
@@ -215,7 +229,7 @@ export default function Game() {
 
   const handleSideShowResult = (loserId: string) => {
     if (!activePlayer || !sideShowOpponent) return
-    if (isMultiplayer && !isHost) return
+    if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
     hostExecute(() => {
       setLastStake(currentStake)
       dispatchAction({
@@ -230,7 +244,7 @@ export default function Game() {
 
   const handleShowResult = (winnerId: string) => {
     if (!activePlayer) return
-    if (isMultiplayer && !isHost) return
+    if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
     hostExecute(() => {
       setLastStake(currentStake)
       dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
@@ -431,7 +445,7 @@ export default function Game() {
           type="button"
           disabled={controlsDisabled}
         >
-          {isMultiplayer && !isHost ? `Waiting for ${activePlayer.name}...` : 'Take Turn'}
+          {isMultiplayer && !isCurrentPlayerTurn ? `Waiting for ${activePlayer.name}...` : 'Take Turn'}
         </button>
       ))}
 
