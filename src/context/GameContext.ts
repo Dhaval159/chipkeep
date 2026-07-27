@@ -19,6 +19,8 @@ export interface GameContextValue {
     hostId: string | null
     isHost: boolean
     isCurrentPlayerTurn: boolean
+    connectionStatus: 'connected' | 'reconnecting' | 'disconnected'
+    disconnectedPlayerIds: string[]
   } | null
 }
 

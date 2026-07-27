@@ -25,6 +25,8 @@ import {
   Undo2,
   Plus,
   Wallet,
+  Wifi,
+  WifiOff,
 } from 'lucide-react'
 
 type DialogState = 'none' | 'confirm-hand' | 'confirm-undo' | 'side-show' | 'show' | 'timeline' | 'menu'
@@ -242,6 +244,17 @@ export default function Game() {
         onMenu={() => setDialog('menu')}
       />
 
+      {isMultiplayer && multiplayer?.connectionStatus !== 'connected' && (
+        <div className="game-connection-bar">
+          <WifiOff size={14} />
+          <span>
+            {multiplayer?.connectionStatus === 'disconnected'
+              ? 'Disconnected'
+              : 'Reconnecting...'}
+          </span>
+        </div>
+      )}
+
       <div className="game-table-wrapper">
         <div className="game-table">
           <div className="deco-chips">
@@ -257,6 +270,7 @@ export default function Game() {
               isDealer={player.id === dealer?.id}
               isCurrentTurn={player.status === 'active'}
               isWinner={player.id === game.winnerId}
+              isDisconnected={multiplayer?.disconnectedPlayerIds?.includes(player.id) ?? false}
               position={position}
             />
           ))}

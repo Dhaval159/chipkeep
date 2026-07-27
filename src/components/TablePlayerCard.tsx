@@ -6,6 +6,7 @@ interface TablePlayerCardProps {
   isDealer: boolean
   isCurrentTurn: boolean
   isWinner: boolean
+  isDisconnected?: boolean
   position: number
 }
 
@@ -55,6 +56,7 @@ export const TablePlayerCard = memo(function TablePlayerCard({
   isDealer,
   isCurrentTurn,
   isWinner,
+  isDisconnected = false,
   position,
 }: TablePlayerCardProps) {
   const isPacked = player.status === 'folded' || player.status === 'out'
@@ -67,7 +69,7 @@ export const TablePlayerCard = memo(function TablePlayerCard({
     `game-player-pos--${position}`,
     isCurrentTurn ? 'table-player-card--active' : '',
     isWinner ? 'table-player-card--winner' : '',
-    isPacked ? 'table-player-card--packed' : '',
+    isPacked || isDisconnected ? 'table-player-card--packed' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -84,8 +86,16 @@ export const TablePlayerCard = memo(function TablePlayerCard({
         {isDealer && (
           <span className="table-player-card__dealer-badge">D</span>
         )}
+        {isDisconnected && (
+          <span className="table-player-card__disconnected-badge">!</span>
+        )}
       </div>
-      <span className="table-player-card__name">{player.name}</span>
+      <span className="table-player-card__name">
+        {player.name}
+        {isDisconnected && (
+          <span className="table-player-card__disconnected-label"> (offline)</span>
+        )}
+      </span>
       <span className="table-player-card__chips">
         {player.chips.toLocaleString()}
       </span>
@@ -93,7 +103,7 @@ export const TablePlayerCard = memo(function TablePlayerCard({
         {player.seen ? 'Seen' : 'Blind'}
       </span>
       <span className={`table-player-card__status ${statusClass}`}>
-        {statusLabel}
+        {isDisconnected ? 'Offline' : statusLabel}
       </span>
     </div>
   )

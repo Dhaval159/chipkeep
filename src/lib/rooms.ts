@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   onSnapshot,
   deleteField,
+  runTransaction,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { Room, RoomPlayer, RoomStatus } from '../types/multiplayer'
@@ -199,6 +200,7 @@ export async function reconnectToRoom(
     const roomRef = doc(db, 'rooms', roomId)
     await updateDoc(roomRef, {
       [`players.${playerId}.isConnected`]: true,
+      [`players.${playerId}.disconnectedAt`]: null,
     })
   } catch {
     /* best-effort */
@@ -213,6 +215,7 @@ export async function markDisconnected(
     const roomRef = doc(db, 'rooms', roomId)
     await updateDoc(roomRef, {
       [`players.${playerId}.isConnected`]: false,
+      [`players.${playerId}.disconnectedAt`]: serverTimestamp(),
     })
   } catch {
     /* best-effort */
@@ -225,6 +228,43 @@ export async function updateRoomStatus(
 ): Promise<void> {
   const roomRef = doc(db, 'rooms', roomId)
   await updateDoc(roomRef, { status })
+}
+
+export async function electNewHost(
+  roomId: string,
+  candidatePlayerId: string,
+): Promise<boolean> {
+  const roomRef = doc(db, 'rooms', roomId)
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(roomRef)
+      if (!snap.exists()) throw new Error('Room not found')
+
+      const data = snap.data() as {
+        hostId: string
+        players: Record<string, RoomPlayer>
+      }
+      const currentHostId = data.hostId
+      const hostPlayer = data.players[currentHostId]
+
+      if (hostPlayer && hostPlayer.isConnected) {
+        throw new Error('Host is still connected')
+      }
+
+      if (!data.players[candidatePlayerId]) {
+        throw new Error('Candidate not in room')
+      }
+
+      tx.update(roomRef, {
+        [`players.${currentHostId}.isHost`]: false,
+        [`players.${candidatePlayerId}.isHost`]: true,
+        hostId: candidatePlayerId,
+      })
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function subscribeToRoom(

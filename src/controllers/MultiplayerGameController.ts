@@ -2,16 +2,19 @@ import { doc, updateDoc } from 'firebase/firestore'
 import type { GameState, PlayerAction, StartGamePayload } from '../types/game'
 import type { GameEngine } from '../engine/GameEngine'
 import type { GameController } from './GameController'
-import { subscribeToRoom } from '../lib/rooms'
+import { subscribeToRoom, electNewHost } from '../lib/rooms'
 import {
   publishPlayerActionRequest,
   processActionRequest,
   subscribeToPendingActionRequests,
 } from '../lib/multiplayerSync'
-import type { Room } from '../types/multiplayer'
+import type { Room, RoomPlayer } from '../types/multiplayer'
 import { db } from '../lib/firebase'
 import { UndoManager } from '../utils/undoManager'
 import { initialGameState } from '../context/GameContext'
+import { countActivePlayers, getNextActiveIndex, isEligibleForTurn, setActivePlayer } from '../utils/turn'
+
+const DISCONNECT_TIMEOUT_MS = 60_000
 
 export class MultiplayerGameController implements GameController {
   private _state: GameState
@@ -22,11 +25,15 @@ export class MultiplayerGameController implements GameController {
   private isHost = false
   private _isReady = false
   private _error: string | null = null
+  private _connectionStatus: 'connected' | 'reconnecting' | 'disconnected' = 'reconnecting'
   private listeners = new Set<() => void>()
   private roomUnsubscribe: (() => void) | null = null
   private actionUnsubscribe: (() => void) | null = null
   private processingActions = false
   private undoManager = new UndoManager()
+  private electionInProgress = false
+  private foldingInProgress = false
+  private _disconnectedPlayerIds: string[] = []
 
   constructor(engine: GameEngine, roomId: string, playerId: string) {
     this.engine = engine
@@ -57,6 +64,10 @@ export class MultiplayerGameController implements GameController {
     return this._error
   }
 
+  get connectionStatus(): 'connected' | 'reconnecting' | 'disconnected' {
+    return this._connectionStatus
+  }
+
   get currentPlayerId(): string | null {
     const active = this._state.players.find((player) => player.status === 'active')
     return active?.id ?? null
@@ -73,6 +84,8 @@ export class MultiplayerGameController implements GameController {
       hostId: this.hostId,
       isHost: this.isHost,
       isCurrentPlayerTurn: this.isCurrentPlayerTurn,
+      connectionStatus: this._connectionStatus as 'connected' | 'reconnecting' | 'disconnected',
+      disconnectedPlayerIds: this._disconnectedPlayerIds,
     }
   }
 
@@ -83,7 +96,6 @@ export class MultiplayerGameController implements GameController {
 
   startGame(_payload: StartGamePayload): void {
     void _payload
-    // Multiplayer game start is managed by the room lobby flow.
   }
 
   startNewHand(): void {
@@ -115,12 +127,10 @@ export class MultiplayerGameController implements GameController {
       return
     }
 
-    // Security: verify the authenticated user matches the action player
     if (action.playerId !== this.playerId) {
       return
     }
 
-    // Security: verify it is this player's turn
     if (!this.isCurrentPlayerTurn) {
       return
     }
@@ -146,7 +156,6 @@ export class MultiplayerGameController implements GameController {
   }
 
   resetGame(): void {
-    // Multiplayer reset is not supported through the game screen.
   }
 
   restoreGame(state: GameState): void {
@@ -186,24 +195,46 @@ export class MultiplayerGameController implements GameController {
     }
   }
 
+  private setConnectionStatus(status: 'connected' | 'reconnecting' | 'disconnected'): void {
+    if (this._connectionStatus !== status) {
+      this._connectionStatus = status
+      this.notify()
+    }
+  }
+
   private setError(message: string | null): void {
     this._error = message
     this.notify()
   }
-
 
   private async updateRemoteState(state: GameState): Promise<void> {
     const roomRef = doc(db, 'rooms', this.roomId)
     await updateDoc(roomRef, { gameState: state })
   }
 
+  private getDisconnectedAtMs(player: RoomPlayer): number | null {
+    if (!player.disconnectedAt) return null
+    const ts = player.disconnectedAt as { toDate?: () => Date; seconds?: number }
+    if (ts.toDate) {
+      return ts.toDate().getTime()
+    }
+    if (ts.seconds) {
+      return ts.seconds * 1000
+    }
+    return null
+  }
+
   private async handleRoomUpdate(room: Room | null): Promise<void> {
     if (!room) {
       this._isReady = false
-      this.setError('Room not found')
+      this.setConnectionStatus('reconnecting')
       return
     }
 
+    this.setConnectionStatus('connected')
+    this._disconnectedPlayerIds = Object.entries(room.players)
+      .filter(([, p]) => !p.isConnected)
+      .map(([pid]) => pid)
     this.hostId = room.hostId
     const becameHost = room.hostId === this.playerId
     if (becameHost && !this.isHost) {
@@ -212,6 +243,19 @@ export class MultiplayerGameController implements GameController {
     } else if (!becameHost && this.isHost) {
       this.isHost = false
       this.stopListeningForPendingActions()
+    }
+
+    // Host election: detect disconnected host and claim host atomically
+    if (!this.isHost && !this.electionInProgress) {
+      const hostPlayer = room.players[room.hostId]
+      if (hostPlayer && !hostPlayer.isConnected) {
+        this.electionInProgress = true
+        const elected = await electNewHost(this.roomId, this.playerId)
+        this.electionInProgress = false
+        if (elected) {
+          return
+        }
+      }
     }
 
     if (!room.gameState) {
@@ -228,6 +272,84 @@ export class MultiplayerGameController implements GameController {
     this._error = null
     this._isReady = true
     this.restoreGame(room.gameState)
+
+    // Host-only: handle timed-out disconnected players
+    if (this.isHost && !this.foldingInProgress && !this._state.handComplete) {
+      this.foldingInProgress = true
+      try {
+        await this.processDisconnectedPlayers(room)
+      } finally {
+        this.foldingInProgress = false
+      }
+    }
+  }
+
+  private async processDisconnectedPlayers(room: Room): Promise<void> {
+    const now = Date.now()
+    let stateModified = false
+    let updatedState = this._state
+
+    for (const [pid, player] of Object.entries(room.players)) {
+      if (player.isConnected) continue
+
+      const disconnectedAtMs = this.getDisconnectedAtMs(player)
+      if (!disconnectedAtMs) continue
+      if (now - disconnectedAtMs < DISCONNECT_TIMEOUT_MS) continue
+
+      const gamePlayer = updatedState.players.find((gp) => gp.id === pid)
+      if (!gamePlayer || !isEligibleForTurn(gamePlayer)) continue
+
+      updatedState = this.foldPlayer(updatedState, pid)
+      stateModified = true
+    }
+
+    if (stateModified) {
+      await this.updateRemoteState(updatedState)
+    }
+  }
+
+  private foldPlayer(state: GameState, playerId: string): GameState {
+    const folded: GameState = {
+      ...state,
+      players: state.players.map((p) =>
+        p.id === playerId ? { ...p, status: 'folded' as const } : p,
+      ),
+    }
+
+    const advanced = this.advanceAfterFold(folded, playerId)
+    return this.settleIfWon(advanced)
+  }
+
+  private advanceAfterFold(state: GameState, foldedPlayerId: string): GameState {
+    const foldedIndex = state.players.findIndex((p) => p.id === foldedPlayerId)
+    if (foldedIndex === -1) return state
+
+    const nextIndex = getNextActiveIndex(state.players, foldedIndex)
+    if (nextIndex === -1) return state
+
+    return { ...state, players: setActivePlayer(state.players, nextIndex) }
+  }
+
+  private settleIfWon(state: GameState): GameState {
+    if (state.handComplete) return state
+    const remaining = state.players.filter(isEligibleForTurn)
+    if (remaining.length === 1) {
+      return {
+        ...state,
+        players: state.players.map((p) =>
+          p.id === remaining[0].id
+            ? { ...p, chips: p.chips + state.pot, status: 'waiting' as const }
+            : p,
+        ),
+        handComplete: true,
+        winnerId: remaining[0].id,
+        potWon: state.pot,
+        pot: 0,
+        currentStake: 0,
+        lastBet: 0,
+      }
+    }
+    return state
   }
 
   private listenForPendingActions(): void {

@@ -7,6 +7,7 @@ export interface RoomPlayer {
   joinedAt: Date | Timestamp
   isHost: boolean
   isConnected: boolean
+  disconnectedAt?: Date | Timestamp | null
 }
 
 export type RoomStatus = 'waiting' | 'playing' | 'finished'
