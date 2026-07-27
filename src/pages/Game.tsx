@@ -43,7 +43,6 @@ export default function Game() {
   const [endHandDismissed, setEndHandDismissed] = useState(false)
   const [betAmount, setBetAmount] = useState('')
   const [betError, setBetError] = useState<string | null>(null)
-  const [lastStake, setLastStake] = useState(0)
   const [betSubmitting, setBetSubmitting] = useState(false)
   const [potPop, setPotPop] = useState(false)
   const [fabEntering, setFabEntering] = useState(false)
@@ -112,7 +111,6 @@ export default function Game() {
   const handlePack = () => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurn) return
-    setLastStake(currentStake)
     dispatchAction({ type: 'PACK', playerId: activePlayer.id })
     closeSheet()
   }
@@ -120,7 +118,6 @@ export default function Game() {
   const handleSideShowResult = (loserId: string) => {
     if (!activePlayer || !sideShowOpponent) return
     if (isMultiplayer && !isCurrentPlayerTurn) return
-    setLastStake(currentStake)
     dispatchAction({
       type: 'SIDE_SHOW',
       playerId: activePlayer.id,
@@ -133,7 +130,6 @@ export default function Game() {
   const handleShowResult = (winnerId: string) => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurn) return
-    setLastStake(currentStake)
     dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
     closeDialog()
   }
