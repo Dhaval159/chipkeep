@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { Button } from './Button'
 
@@ -28,12 +29,44 @@ export function Dialog({
   secondaryAction,
   onClose,
 }: DialogProps) {
-  if (!open) return null
+  const [visible, setVisible] = useState(false)
+  const [exiting, setExiting] = useState(false)
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const startExit = useCallback(() => {
+    setExiting(true)
+    exitTimerRef.current = setTimeout(() => {
+      setVisible(false)
+      setExiting(false)
+      onClose()
+    }, 200)
+  }, [onClose])
+
+  useEffect(() => {
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (open) {
+      setVisible(true)
+      setExiting(false)
+    } else if (visible) {
+      startExit()
+    }
+  }, [open, visible, startExit])
+
+  if (!visible && !open) return null
 
   return (
-    <div className="ck-dialog-overlay" onClick={onClose} role="presentation">
+    <div
+      className={`ck-dialog-overlay${exiting ? ' ck-dialog-overlay--exiting' : ''}`}
+      onClick={startExit}
+      role="presentation"
+    >
       <div
-        className="ck-dialog"
+        className={`ck-dialog${exiting ? ' ck-dialog--exiting' : ''}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -45,7 +78,8 @@ export function Dialog({
           {secondaryLabel && (
             <Button
               variant="secondary"
-              onClick={secondaryAction ?? onClose}
+              onClick={secondaryAction ?? startExit}
+              disabled={exiting}
             >
               {secondaryLabel}
             </Button>
@@ -53,7 +87,7 @@ export function Dialog({
           <Button
             variant="primary"
             onClick={primaryAction}
-            disabled={primaryDisabled}
+            disabled={primaryDisabled || exiting}
             loading={primaryLoading}
           >
             {primaryLabel}

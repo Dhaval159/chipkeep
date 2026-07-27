@@ -35,7 +35,19 @@ function getBlindSeenLabel(player: Player): { label: string; variant: string } {
 
 function WinnerCard({ winner, potWon }: { winner: Player | null; potWon: number }) {
   return (
-    <div className="endhand-winner-card">
+    <div className="endhand-winner-card endhand-winner-card--celebrating">
+      <div className="endhand-confetti">
+        <div className="endhand-confetti__particle endhand-confetti__particle--1" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--2" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--3" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--4" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--5" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--6" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--7" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--8" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--9" />
+        <div className="endhand-confetti__particle endhand-confetti__particle--10" />
+      </div>
       <div className="endhand-winner-card__top">
         <div className="endhand-winner-card__avatar-wrapper">
           {winner && <Avatar name={winner.name} size="xl" />}

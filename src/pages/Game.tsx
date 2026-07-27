@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useGame } from '../hooks/useGame'
 import { GameHeader } from '../components/GameHeader'
@@ -36,6 +36,10 @@ export default function Game() {
   const [betError, setBetError] = useState<string | null>(null)
   const [lastStake, setLastStake] = useState(0)
   const [betSubmitting, setBetSubmitting] = useState(false)
+  const [potPop, setPotPop] = useState(false)
+  const [fabEntering, setFabEntering] = useState(false)
+  const fabVisibleRef = useRef(false)
+  const prevPotRef = useRef(game.pot)
 
   const isMultiplayer = !!roomId
 
@@ -43,6 +47,29 @@ export default function Game() {
   const isCurrentPlayerTurn = isMultiplayer ? (multiplayer?.isCurrentPlayerTurn ?? false) : true
 
   const { players, pot, handNumber, currentStake } = game
+
+  useEffect(() => {
+    if (prevPotRef.current !== pot && pot > 0) {
+      setPotPop(true)
+      const timer = setTimeout(() => setPotPop(false), 350)
+      prevPotRef.current = pot
+      return () => clearTimeout(timer)
+    }
+    prevPotRef.current = pot
+  }, [pot])
+
+  useEffect(() => {
+    const fabShouldShow = !!activePlayer && !game.handComplete
+    if (fabShouldShow && !fabVisibleRef.current) {
+      setFabEntering(true)
+      fabVisibleRef.current = true
+      const timer = setTimeout(() => setFabEntering(false), 300)
+      return () => clearTimeout(timer)
+    }
+    if (!fabShouldShow) {
+      fabVisibleRef.current = false
+    }
+  })
 
   const activePlayer = useMemo(() => {
     const idx = players.findIndex((p) => p.status === 'active')
@@ -236,7 +263,7 @@ export default function Game() {
           <div className="game-pot-center">
             <div className="game-pot-card">
               <span className="game-pot-card__label">Current Pot</span>
-              <span className="game-pot-card__amount">
+              <span className={`game-pot-card__amount${potPop ? ' game-pot-card__amount--pop' : ''}`}>
                 ₹{pot.toLocaleString()}
               </span>
               <div className="game-pot-card__divider" />
@@ -259,7 +286,7 @@ export default function Game() {
 
       {activePlayer && !game.handComplete && (
         <button
-          className="game-fab"
+          className={`game-fab${fabEntering ? ' game-fab--entering' : ''}`}
           onClick={openSheet}
           type="button"
           disabled={controlsDisabled}
