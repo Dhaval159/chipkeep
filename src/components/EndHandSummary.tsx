@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import type { Player } from '../types/game'
 import { timeline } from '../utils/timeline'
-import { PartyPopper, Trophy, Clock, Wallet, Users, UserCheck, CircleDollarSign, Eye, ArrowRight } from 'lucide-react'
+import { PartyPopper, Trophy, Clock, Wallet, Users, Eye, ArrowRight, Sparkles } from 'lucide-react'
 import { Avatar } from './ui/Avatar'
+import { Button } from './ui/Button'
 
 interface EndHandSummaryProps {
   winner: Player | null
@@ -33,99 +34,6 @@ function getBlindSeenLabel(player: Player): { label: string; variant: string } {
   return { label: 'Blind', variant: 'blind' }
 }
 
-function WinnerCard({ winner, potWon }: { winner: Player | null; potWon: number }) {
-  return (
-    <div className="endhand-winner-card endhand-winner-card--celebrating">
-      <div className="endhand-confetti">
-        <div className="endhand-confetti__particle endhand-confetti__particle--1" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--2" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--3" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--4" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--5" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--6" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--7" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--8" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--9" />
-        <div className="endhand-confetti__particle endhand-confetti__particle--10" />
-      </div>
-      <div className="endhand-winner-card__top">
-        <div className="endhand-winner-card__avatar-wrapper">
-          {winner && <Avatar name={winner.name} size="xl" />}
-        </div>
-        <div className="endhand-winner-card__info">
-          <span className="endhand-winner-card__name">{winner?.name ?? '—'}</span>
-          <span className="endhand-winner-card__badge">Winner</span>
-        </div>
-        <div className="endhand-winner-card__trophy">
-          <Trophy size={28} />
-        </div>
-      </div>
-
-      <div className="endhand-winner-card__divider" />
-
-      <div className="endhand-winner-card__pot">
-        <span className="endhand-winner-card__pot-label">Pot Won</span>
-        <span className="endhand-winner-card__pot-value">₹{potWon.toLocaleString()}</span>
-      </div>
-
-      {winner && (
-        <div className="endhand-winner-card__total">
-          <span className="endhand-winner-card__total-label">Total Chips</span>
-          <span className="endhand-winner-card__total-value">₹{winner.chips.toLocaleString()}</span>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="endhand-summary-card">
-      <div className="endhand-summary-card__icon">{icon}</div>
-      <span className="endhand-summary-card__label">{label}</span>
-      <span className="endhand-summary-card__value">{value}</span>
-    </div>
-  )
-}
-
-function PlayerStandingCard({
-  player,
-  isWinner,
-  isDealer,
-  isChipLeader,
-}: {
-  player: Player
-  isWinner: boolean
-  isDealer: boolean
-  isChipLeader: boolean
-}) {
-  const isPacked = player.status === 'folded' || player.status === 'out'
-  const statusInfo = getBlindSeenLabel(player)
-
-  return (
-    <div className={`endhand-standing-card ${isWinner ? 'endhand-standing-card--winner' : ''} ${isPacked ? 'endhand-standing-card--packed' : ''}`}>
-      <div className="endhand-standing-card__avatar">
-        <Avatar name={player.name} size="md" />
-      </div>
-      <div className="endhand-standing-card__info">
-        <span className="endhand-standing-card__name">{player.name}</span>
-        <span className="endhand-standing-card__chips">₹{player.chips.toLocaleString()}</span>
-      </div>
-      <div className="endhand-standing-card__status-area">
-        <div className="endhand-standing-card__badges">
-          {isWinner && <span className="endhand-standing-card__badge endhand-standing-card__badge--winner">Winner</span>}
-          {isChipLeader && !isWinner && <span className="endhand-standing-card__badge endhand-standing-card__badge--leader">Chip Leader</span>}
-          {isDealer && !isWinner && <span className="endhand-standing-card__badge endhand-standing-card__badge--dealer">Dealer</span>}
-          {isPacked && <span className="endhand-standing-card__badge endhand-standing-card__badge--packed">Packed</span>}
-        </div>
-        <span className={`endhand-standing-card__bs endhand-standing-card__bs--${statusInfo.variant}`}>
-          {statusInfo.label}
-        </span>
-      </div>
-    </div>
-  )
-}
-
 export function EndHandSummary({
   winner,
   potWon,
@@ -136,23 +44,28 @@ export function EndHandSummary({
   onReturn,
   onViewHistory,
 }: EndHandSummaryProps) {
+  const [visible, setVisible] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 50)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (visible) {
+      const t = setTimeout(() => setShowDetails(true), 400)
+      return () => clearTimeout(t)
+    }
+  }, [visible])
+
   const completedHands = useMemo(() => timeline.getCompletedHands(), [])
   const currentHand = completedHands.length > 0 ? completedHands[completedHands.length - 1] : null
-
-  const duration = currentHand?.duration
-    ? formatDuration(currentHand.duration)
-    : '—'
+  const duration = currentHand?.duration ? formatDuration(currentHand.duration) : '—'
 
   const playersRemaining = players.filter(
     (p) => p.status !== 'folded' && p.status !== 'out',
   ).length
-
-  const dealerName = useMemo(() => {
-    const firstRemaining = players.find(
-      (p) => p.status !== 'folded' && p.status !== 'out',
-    )
-    return firstRemaining?.name ?? '—'
-  }, [players])
 
   const chipLeaderId = useMemo(() => {
     let maxChips = -1
@@ -168,59 +81,126 @@ export function EndHandSummary({
 
   return (
     <div className="endhand-overlay">
-      <div className="endhand-page">
-        <div className="endhand-header">
-          <div className="endhand-header__icon">
-            <PartyPopper size={28} />
-          </div>
-          <h1 className="endhand-header__title">Hand #{handNumber} Complete</h1>
-          <p className="endhand-header__subtitle">Round finished</p>
+      <div className="endhand-modal">
+        <div className="endhand-confetti-layer">
+          {[...Array(16)].map((_, i) => (
+            <div
+              key={i}
+              className="endhand-particle"
+              style={{
+                left: `${5 + (i * 6.2) % 90}%`,
+                animationDelay: `${0.05 + (i * 0.08)}s`,
+                animationDuration: `${1.2 + (i % 3) * 0.3}s`,
+                background: ['var(--gold)', 'var(--primary)', 'var(--danger)', 'var(--success)', '#D97706'][i % 5],
+                width: `${5 + (i % 3) * 2}px`,
+                height: `${5 + (i % 3) * 2}px`,
+                borderRadius: i % 3 === 0 ? '50%' : '2px',
+              }}
+            />
+          ))}
         </div>
 
-        <WinnerCard winner={winner} potWon={potWon} />
-
-        <section className="endhand-section">
-          <h2 className="endhand-section__title">Game Summary</h2>
-          <div className="endhand-summary-grid">
-            <SummaryCard icon={<Clock size={20} />} label="Duration" value={duration} />
-            <SummaryCard icon={<Wallet size={20} />} label="Pot" value={`₹${potWon.toLocaleString()}`} />
-            <SummaryCard icon={<CircleDollarSign size={20} />} label="Stake" value={`₹${currentStake.toLocaleString()}`} />
-            <SummaryCard icon={<Users size={20} />} label="Remaining" value={String(playersRemaining)} />
-            <SummaryCard icon={<UserCheck size={20} />} label="Dealer" value={dealerName} />
-            <SummaryCard icon={<Trophy size={20} />} label="Total Hands" value={String(completedHands.length)} />
+        <div className={`endhand-modal__header ${visible ? 'endhand-modal__header--visible' : ''}`}>
+          <div className="endhand-modal__icon">
+            <Trophy size={28} />
           </div>
-        </section>
+          <h2 className="endhand-modal__title">Hand #{handNumber}</h2>
+          <p className="endhand-modal__subtitle">Winner!</p>
+        </div>
 
-        <section className="endhand-section endhand-section--standings">
-          <h2 className="endhand-section__title">Standings</h2>
-          <div className="endhand-standings-list">
-            {players.map((player) => (
-              <PlayerStandingCard
+        {winner && (
+          <div className={`endhand-modal__winner ${visible ? 'endhand-modal__winner--visible' : ''}`}>
+            <div className="endhand-modal__winner-avatar">
+              <div className="endhand-modal__winner-ring">
+                <Avatar name={winner.name} size="xl" winnerRing />
+              </div>
+              <div className="endhand-modal__crown">
+                <Sparkles size={14} />
+              </div>
+            </div>
+            <h3 className="endhand-modal__winner-name">{winner.name}</h3>
+            <div className="endhand-modal__winner-chips">
+              <span className="endhand-modal__winner-chips-value">
+                +₹{potWon.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className={`endhand-modal__stats ${showDetails ? 'endhand-modal__stats--visible' : ''}`}>
+          <div className="endhand-modal__stat">
+            <Wallet size={14} />
+            <span className="endhand-modal__stat-label">Pot</span>
+            <span className="endhand-modal__stat-value">₹{potWon.toLocaleString()}</span>
+          </div>
+          <div className="endhand-modal__stat">
+            <Clock size={14} />
+            <span className="endhand-modal__stat-label">Duration</span>
+            <span className="endhand-modal__stat-value">{duration}</span>
+          </div>
+          <div className="endhand-modal__stat">
+            <Users size={14} />
+            <span className="endhand-modal__stat-label">Remaining</span>
+            <span className="endhand-modal__stat-value">{playersRemaining}/{players.length}</span>
+          </div>
+        </div>
+
+        <div className={`endhand-modal__standings ${showDetails ? 'endhand-modal__standings--visible' : ''}`}>
+          {players.map((player, idx) => {
+            const isWinner = player.id === winner?.id
+            const isChipLeader = player.id === chipLeaderId
+            const isPacked = player.status === 'folded' || player.status === 'out'
+            const statusInfo = getBlindSeenLabel(player)
+
+            return (
+              <div
                 key={player.id}
-                player={player}
-                isWinner={player.id === winner?.id}
-                isDealer={player.name === dealerName && player.id !== winner?.id}
-                isChipLeader={player.id === chipLeaderId}
-              />
-            ))}
+                className={`endhand-standing-row ${isWinner ? 'endhand-standing-row--winner' : ''} ${isPacked ? 'endhand-standing-row--packed' : ''}`}
+                style={{ animationDelay: `${idx * 0.04}s` }}
+              >
+                <div className="endhand-standing-row__left">
+                  <Avatar name={player.name} size="sm" />
+                  <div className="endhand-standing-row__info">
+                    <span className="endhand-standing-row__name">{player.name}</span>
+                    <span className="endhand-standing-row__meta">
+                      ₹{player.chips.toLocaleString()}
+                      {isPacked && ' · Packed'}
+                      {isChipLeader && !isWinner && ' · Leader'}
+                    </span>
+                  </div>
+                </div>
+                <div className="endhand-standing-row__right">
+                  {isWinner && (
+                    <span className="endhand-standing-row__badge endhand-standing-row__badge--winner">
+                      <Trophy size={10} />
+                      Won
+                    </span>
+                  )}
+                  <span className={`endhand-standing-row__bs endhand-standing-row__bs--${statusInfo.variant}`}>
+                    {statusInfo.label}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className={`endhand-modal__actions ${showDetails ? 'endhand-modal__actions--visible' : ''}`}>
+          <Button variant="primary" fullWidth onClick={onNextHand}>
+            <ArrowRight size={16} />
+            Next Hand
+          </Button>
+          <div className="endhand-modal__actions-secondary">
+            <Button variant="ghost" fullWidth onClick={onReturn}>
+              <Eye size={16} />
+              Return to Table
+            </Button>
+            <Button variant="ghost" fullWidth onClick={onViewHistory}>
+              <Clock size={16} />
+              History
+            </Button>
           </div>
-        </section>
-
-        <div className="endhand-spacer" />
-      </div>
-
-      <div className="endhand-bottom-bar">
-        <button className="endhand-bottom-bar__primary" onClick={onNextHand} type="button">
-          <ArrowRight size={18} />
-          Next Hand
-        </button>
-        <button className="endhand-bottom-bar__secondary" onClick={onReturn} type="button">
-          <Eye size={18} />
-          Return to Table
-        </button>
-        <button className="endhand-bottom-bar__text" onClick={onViewHistory} type="button">
-          View Hand History
-        </button>
+        </div>
       </div>
     </div>
   )

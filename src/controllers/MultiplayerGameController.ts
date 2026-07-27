@@ -58,7 +58,12 @@ export class MultiplayerGameController implements GameController {
   }
 
   get currentPlayerId(): string | null {
-    return this._state.players.find((player) => player.status === 'active')?.id ?? null
+    const active = this._state.players.find((player) => player.status === 'active')
+    return active?.id ?? null
+  }
+
+  get isCurrentPlayerTurn(): boolean {
+    return this.currentPlayerId === this.playerId
   }
 
   get multiplayerMetadata() {
@@ -67,7 +72,7 @@ export class MultiplayerGameController implements GameController {
       playerId: this.playerId,
       hostId: this.hostId,
       isHost: this.isHost,
-      isCurrentPlayerTurn: this.currentPlayerId === this.playerId,
+      isCurrentPlayerTurn: this.isCurrentPlayerTurn,
     }
   }
 
@@ -110,7 +115,13 @@ export class MultiplayerGameController implements GameController {
       return
     }
 
-    if (!this.isCurrentTurn(action.playerId)) {
+    // Security: verify the authenticated user matches the action player
+    if (action.playerId !== this.playerId) {
+      return
+    }
+
+    // Security: verify it is this player's turn
+    if (!this.isCurrentPlayerTurn) {
       return
     }
 
@@ -145,11 +156,6 @@ export class MultiplayerGameController implements GameController {
     this.notify()
   }
 
-  restoreGameState(state: GameState): void {
-    this._state = state
-    this.notify()
-  }
-
   dispose(): void {
     if (this.roomUnsubscribe) {
       this.roomUnsubscribe()
@@ -178,11 +184,6 @@ export class MultiplayerGameController implements GameController {
     this.notify()
   }
 
-  private isCurrentTurn(playerId: string): boolean {
-    return this._state.players.some(
-      (player) => player.id === playerId && player.status === 'active' && player.id === this.currentPlayerId,
-    )
-  }
 
   private async updateRemoteState(state: GameState): Promise<void> {
     const roomRef = doc(db, 'rooms', this.roomId)

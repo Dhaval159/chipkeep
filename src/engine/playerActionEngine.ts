@@ -160,6 +160,9 @@ function handleShow(state: GameState, playerId: string, winnerId: string): GameS
   if (!isEligibleForTurn(winner)) {
     return state
   }
+  if (!requester.seen) {
+    return state
+  }
 
   return awardPot(state, winnerId)
 }

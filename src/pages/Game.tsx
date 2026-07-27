@@ -190,7 +190,7 @@ export default function Game() {
     !!sideShowOpponent &&
     canSideShow(activePlayer, sideShowOpponent, activeCount)
   const sideShowDisabledReason = getSideShowDisableReason(activePlayer, sideShowOpponent, activeCount)
-  const showAllowed = !!activePlayer && activeCount === 2
+  const showAllowed = !!activePlayer && activeCount === 2 && activePlayer.seen
 
   const winner = game.winnerId
     ? players.find((p) => p.id === game.winnerId) ?? null
