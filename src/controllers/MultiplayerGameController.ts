@@ -13,8 +13,10 @@ import { db } from '../lib/firebase'
 import { UndoManager } from '../utils/undoManager'
 import { initialGameState } from '../context/GameContext'
 import { getNextActiveIndex, isEligibleForTurn, setActivePlayer } from '../utils/turn'
+import { perfMark, perfMeasure } from '../utils/perf'
 
 const DISCONNECT_TIMEOUT_MS = 60_000
+const DISCONNECT_CHECK_INTERVAL_MS = 15_000
 
 export class MultiplayerGameController implements GameController {
   private _state: GameState
@@ -32,8 +34,9 @@ export class MultiplayerGameController implements GameController {
   private processingActions = false
   private undoManager = new UndoManager()
   private electionInProgress = false
-  private foldingInProgress = false
   private _disconnectedPlayerIds: string[] = []
+  private disconnectCheckTimer: ReturnType<typeof setInterval> | null = null
+  private lastRoom: Room | null = null
 
   constructor(engine: GameEngine, roomId: string, playerId: string) {
     this.engine = engine
@@ -123,6 +126,7 @@ export class MultiplayerGameController implements GameController {
   }
 
   dispatchAction(action: PlayerAction): void {
+    perfMark('CTRL_dispatchAction')
     if (!this._isReady) {
       return
     }
@@ -134,10 +138,16 @@ export class MultiplayerGameController implements GameController {
     if (!this.isCurrentPlayerTurn) {
       return
     }
+    perfMark('CTRL_turn_validated')
 
-    publishPlayerActionRequest(this.roomId, action, this.playerId).catch((error) => {
-      this.setError(error instanceof Error ? error.message : 'Failed to send action request')
-    })
+    publishPlayerActionRequest(this.roomId, action, this.playerId)
+      .then(() => {
+        perfMark('CTRL_addDoc_complete')
+        perfMeasure('CTRL_dispatchAction', 'CTRL_addDoc_complete', 'addDoc → complete')
+      })
+      .catch((error) => {
+        this.setError(error instanceof Error ? error.message : 'Failed to send action request')
+      })
   }
 
   undo(): void {
@@ -181,6 +191,10 @@ export class MultiplayerGameController implements GameController {
       this.actionUnsubscribe()
       this.actionUnsubscribe = null
     }
+    if (this.disconnectCheckTimer) {
+      clearInterval(this.disconnectCheckTimer)
+      this.disconnectCheckTimer = null
+    }
   }
 
   private initialize(): void {
@@ -208,8 +222,11 @@ export class MultiplayerGameController implements GameController {
   }
 
   private async updateRemoteState(state: GameState): Promise<void> {
+    perfMark('FS_write_start')
     const roomRef = doc(db, 'rooms', this.roomId)
     await updateDoc(roomRef, { gameState: state })
+    perfMark('FS_write_done')
+    perfMeasure('FS_write_start', 'FS_write_done', 'Firestore write: updateDoc gameState')
   }
 
   private getDisconnectedAtMs(player: RoomPlayer): number | null {
@@ -224,37 +241,48 @@ export class MultiplayerGameController implements GameController {
     return null
   }
 
-  private async handleRoomUpdate(room: Room | null): Promise<void> {
+  private handleRoomUpdate(room: Room | null): void {
+    perfMark('ROOM_onSnapshot_fired')
     if (!room) {
       this._isReady = false
       this.setConnectionStatus('reconnecting')
       return
     }
 
-    this.setConnectionStatus('connected')
-    this._disconnectedPlayerIds = Object.entries(room.players)
+    const prevConnectionStatus = this._connectionStatus
+    this._connectionStatus = 'connected'
+
+    const newDisconnectedIds = Object.entries(room.players)
       .filter(([, p]) => !p.isConnected)
       .map(([pid]) => pid)
     this.hostId = room.hostId
+    this.lastRoom = room
+
     const becameHost = room.hostId === this.playerId
     if (becameHost && !this.isHost) {
       this.isHost = true
       this.listenForPendingActions()
+      this.startDisconnectCheck()
     } else if (!becameHost && this.isHost) {
       this.isHost = false
       this.stopListeningForPendingActions()
+      this.stopDisconnectCheck()
     }
 
-    // Host election: detect disconnected host and claim host atomically
+    // Fire-and-forget host election if current host is disconnected
     if (!this.isHost && !this.electionInProgress) {
       const hostPlayer = room.players[room.hostId]
       if (hostPlayer && !hostPlayer.isConnected) {
         this.electionInProgress = true
-        const elected = await electNewHost(this.roomId, this.playerId)
-        this.electionInProgress = false
-        if (elected) {
-          return
-        }
+        electNewHost(this.roomId, this.playerId)
+          .then((elected) => {
+            if (elected) {
+              this.lastRoom = null
+            }
+          })
+          .finally(() => {
+            this.electionInProgress = false
+          })
       }
     }
 
@@ -264,32 +292,59 @@ export class MultiplayerGameController implements GameController {
         this.setError('Game is not available.')
       } else {
         this._error = null
-        this.notify()
+        if (
+          prevConnectionStatus !== this._connectionStatus ||
+          this._disconnectedPlayerIds.length !== newDisconnectedIds.length
+        ) {
+          this._disconnectedPlayerIds = newDisconnectedIds
+          this.notify()
+        }
       }
       return
     }
 
     this._error = null
-    this._isReady = true
-    this.restoreGame(room.gameState)
+    perfMark('ROOM_before_restoreGame')
 
-    // Host-only: handle timed-out disconnected players
-    if (this.isHost && !this.foldingInProgress && !this._state.handComplete) {
-      this.foldingInProgress = true
-      try {
-        await this.processDisconnectedPlayers(room)
-      } finally {
-        this.foldingInProgress = false
+    const isNewState = room.gameState !== this._state
+    const hasNewDisconnected = this._disconnectedPlayerIds.length !== newDisconnectedIds.length
+    const connectionChanged = prevConnectionStatus !== this._connectionStatus
+
+    if (isNewState || hasNewDisconnected || connectionChanged) {
+      if (isNewState) {
+        this._state = room.gameState
       }
+      this._isReady = true
+      this._disconnectedPlayerIds = newDisconnectedIds
+      perfMark('ROOM_after_restoreGame')
+      perfMeasure('ROOM_onSnapshot_fired', 'ROOM_after_restoreGame', 'Room snapshot → state update + notify')
+      this.notify()
     }
   }
 
-  private async processDisconnectedPlayers(room: Room): Promise<void> {
+  private startDisconnectCheck(): void {
+    if (this.disconnectCheckTimer) return
+    this.disconnectCheckTimer = setInterval(() => {
+      if (this.lastRoom && !this._state.handComplete) {
+        this.checkDisconnectedPlayers().catch(() => {})
+      }
+    }, DISCONNECT_CHECK_INTERVAL_MS)
+  }
+
+  private stopDisconnectCheck(): void {
+    if (this.disconnectCheckTimer) {
+      clearInterval(this.disconnectCheckTimer)
+      this.disconnectCheckTimer = null
+    }
+  }
+
+  private async checkDisconnectedPlayers(): Promise<void> {
+    if (!this.lastRoom || this._state.handComplete) return
     const now = Date.now()
     let stateModified = false
     let updatedState = this._state
 
-    for (const [pid, player] of Object.entries(room.players)) {
+    for (const [pid, player] of Object.entries(this.lastRoom.players)) {
       if (player.isConnected) continue
 
       const disconnectedAtMs = this.getDisconnectedAtMs(player)
@@ -363,17 +418,30 @@ export class MultiplayerGameController implements GameController {
       }
 
       this.processingActions = true
+      perfMark('HOST_processing_actions_start')
       try {
         for (const request of requests) {
-          await processActionRequest(
+          perfMark('HOST_process_single_action_start')
+          const nextState = await processActionRequest(
             this.roomId,
             request.id,
             this.engine,
+            this._state,
             this.playerId,
-            this.validateAction.bind(this),
+          )
+          if (nextState) {
+            this._state = nextState
+          }
+          perfMark('HOST_process_single_action_done')
+          perfMeasure(
+            'HOST_process_single_action_start',
+            'HOST_process_single_action_done',
+            `Host process action ${request.action.type}`,
           )
         }
       } finally {
+        perfMark('HOST_processing_actions_done')
+        perfMeasure('HOST_processing_actions_start', 'HOST_processing_actions_done', 'Host processed all pending actions')
         this.processingActions = false
       }
     })
@@ -384,10 +452,5 @@ export class MultiplayerGameController implements GameController {
       this.actionUnsubscribe()
       this.actionUnsubscribe = null
     }
-  }
-
-  private validateAction(state: GameState, action: PlayerAction): boolean {
-    const activePlayer = state.players.find((player) => player.status === 'active')
-    return Boolean(activePlayer && activePlayer.id === action.playerId)
   }
 }

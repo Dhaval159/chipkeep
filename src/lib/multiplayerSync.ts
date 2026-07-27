@@ -2,15 +2,17 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   onSnapshot,
   query,
-  runTransaction,
   serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from './firebase'
 import type { GameEngine } from '../engine/GameEngine'
 import type { GameState, PlayerAction } from '../types/game'
+import { perfMark, perfMeasure } from '../utils/perf'
 
 export interface MultiplayerActionRequest {
   id: string
@@ -31,12 +33,15 @@ export async function publishPlayerActionRequest(
   action: PlayerAction,
   playerId: string,
 ): Promise<void> {
+  perfMark('FS_addDoc_start')
   await addDoc(actionsCollection(roomId), {
     action,
     playerId,
     createdAt: serverTimestamp(),
     processed: false,
   })
+  perfMark('FS_addDoc_done')
+  perfMeasure('FS_addDoc_start', 'FS_addDoc_done', 'Firestore write: addDoc action')
 }
 
 export function subscribeToPendingActionRequests(
@@ -47,6 +52,7 @@ export function subscribeToPendingActionRequests(
   const actionQuery = query(actionsRef, where('processed', '==', false))
 
   return onSnapshot(actionQuery, (snapshot) => {
+    perfMark('HOST_pendingActions_onSnapshot')
     const requests = snapshot.docs
       .map((docSnapshot) => {
         const data = docSnapshot.data() as {
@@ -69,6 +75,7 @@ export function subscribeToPendingActionRequests(
       })
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
 
+    perfMark('HOST_pendingActions_sorted')
     callback(requests)
   })
 }
@@ -77,58 +84,62 @@ export async function processActionRequest(
   roomId: string,
   requestId: string,
   engine: GameEngine,
+  currentState: GameState,
   processorId: string,
-  validateAction: (state: GameState, action: PlayerAction) => boolean,
-): Promise<void> {
+): Promise<GameState | null> {
   const roomRef = doc(db, 'rooms', roomId)
   const actionRef = doc(roomRef, 'actions', requestId)
 
-  await runTransaction(db, async (tx) => {
-    const actionSnapshot = await tx.get(actionRef)
-    if (!actionSnapshot.exists()) {
-      return
-    }
+  perfMark('FS_readAction_start')
+  const actionSnapshot = await getDoc(actionRef)
+  perfMark('FS_readAction_done')
+  perfMeasure('FS_readAction_start', 'FS_readAction_done', 'Firestore read: action doc')
 
-    const actionData = actionSnapshot.data() as {
-      action: PlayerAction
-      processed: boolean
-    }
+  if (!actionSnapshot.exists()) {
+    perfMark('FS_action_not_found')
+    return null
+  }
 
-    if (actionData.processed) {
-      return
-    }
+  const actionData = actionSnapshot.data() as {
+    action: PlayerAction
+    processed: boolean
+  }
 
-    const roomSnapshot = await tx.get(roomRef)
-    if (!roomSnapshot.exists()) {
-      await tx.update(actionRef, {
-        processed: true,
-        processedAt: serverTimestamp(),
-        processedBy: processorId,
-      })
-      return
-    }
+  if (actionData.processed) {
+    perfMark('FS_action_already_processed')
+    return null
+  }
 
-    const roomData = roomSnapshot.data() as { gameState?: GameState }
-    const currentState = roomData.gameState as GameState | undefined
-    if (!currentState || !validateAction(currentState, actionData.action)) {
-      await tx.update(actionRef, {
-        processed: true,
-        processedAt: serverTimestamp(),
-        processedBy: processorId,
-      })
-      return
-    }
-
-    const nextState = engine.executeAction(currentState, actionData.action)
-
-    await tx.update(roomRef, {
-      gameState: nextState,
-    })
-
-    await tx.update(actionRef, {
+  const player = currentState.players.find((p) => p.status === 'active')
+  const isValid = Boolean(player && player.id === actionData.action.playerId)
+  if (!currentState || !isValid) {
+    await updateDoc(actionRef, {
       processed: true,
       processedAt: serverTimestamp(),
       processedBy: processorId,
-    })
-  })
+    }).catch(() => {})
+    perfMark('FS_action_invalid_marked')
+    return null
+  }
+
+  perfMark('FS_engineExecute_start')
+  const nextState = engine.executeAction(currentState, actionData.action)
+  perfMark('FS_engineExecute_done')
+  perfMeasure('FS_engineExecute_start', 'FS_engineExecute_done', 'GameEngine.executeAction')
+
+  perfMark('FS_writeRoom_start')
+  await updateDoc(roomRef, { gameState: nextState })
+  perfMark('FS_writeRoom_done')
+  perfMeasure('FS_writeRoom_start', 'FS_writeRoom_done', 'Firestore write: room gameState')
+
+  perfMark('FS_markAction_start')
+  await updateDoc(actionRef, {
+    processed: true,
+    processedAt: serverTimestamp(),
+    processedBy: processorId,
+  }).catch(() => {})
+  perfMark('FS_markAction_done')
+  perfMeasure('FS_markAction_start', 'FS_markAction_done', 'Firestore write: mark action processed')
+
+  return nextState
 }

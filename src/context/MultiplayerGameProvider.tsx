@@ -8,6 +8,7 @@ import { useMultiplayer } from '../hooks/useMultiplayer'
 import { clearSavedGame } from '../utils/storage'
 import { reconnectToRoom, markDisconnected } from '../lib/rooms'
 import type { GameContextValue } from './GameContext'
+import { perfMark, perfMeasure } from '../utils/perf'
 
 export function MultiplayerGameProvider({ children }: { children: ReactNode }) {
   const { roomId } = useParams<{ roomId: string }>()
@@ -33,9 +34,12 @@ export function MultiplayerGameProvider({ children }: { children: ReactNode }) {
 
     controller.start()
     const unsubscribe = controller.subscribe(() => {
+      perfMark('REACT_setGame_start')
       setGame(controller.state)
       setReady(controller.ready)
       setError(controller.error)
+      perfMark('REACT_setGame_done')
+      perfMeasure('REACT_setGame_start', 'REACT_setGame_done', 'React setGame + setReady + setError')
     })
 
     clearSavedGame()

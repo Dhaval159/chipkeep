@@ -17,6 +17,7 @@ import {
   getNextActiveIndex,
 } from '../utils/turn'
 import { validateBet } from '../utils/betting'
+import { perfMark, perfMeasure, perfFlush, perfReset } from '../utils/perf'
 import {
   Eye,
   Hand,
@@ -57,6 +58,19 @@ export default function Game() {
 
   const { players, pot, handNumber, currentStake } = game
 
+  // Detect when pot updates after a bet — measures end-to-end latency
+  const prevPotForPerf = useRef(pot)
+  useEffect(() => {
+    if (pot !== prevPotForPerf.current) {
+      if (pot > prevPotForPerf.current) {
+        perfMark('BET_pot_updated_ui')
+        perfMeasure('BET_user_click_confirm', 'BET_pot_updated_ui', 'END2END: Click → Pot UI update')
+        perfFlush('BET_ACTION')
+      }
+      prevPotForPerf.current = pot
+    }
+  }, [pot])
+
   useEffect(() => {
     if (prevPotRef.current !== pot && pot > 0) {
       setPotPop(true)
@@ -66,6 +80,11 @@ export default function Game() {
     }
     prevPotRef.current = pot
   }, [pot])
+
+  const activePlayer = useMemo(() => {
+    const idx = players.findIndex((p) => p.status === 'active')
+    return idx >= 0 ? players[idx] : undefined
+  }, [players])
 
   useEffect(() => {
     const fabShouldShow = !!activePlayer && !game.handComplete
@@ -78,12 +97,7 @@ export default function Game() {
     if (!fabShouldShow) {
       fabVisibleRef.current = false
     }
-  })
-
-  const activePlayer = useMemo(() => {
-    const idx = players.findIndex((p) => p.status === 'active')
-    return idx >= 0 ? players[idx] : undefined
-  }, [players])
+  }, [activePlayer, game.handComplete])
 
   const controlsDisabled = isMultiplayer ? !isCurrentPlayerTurn : false
 
@@ -104,7 +118,10 @@ export default function Game() {
   const handleBet = (amount: number) => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurn) return
+    perfMark('BET_dispatchAction_start')
     dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
+    perfMark('BET_dispatchAction_end')
+    perfMeasure('BET_dispatchAction_start', 'BET_dispatchAction_end', 'dispatchAction() call')
     closeSheet()
     setBetSubmitting(false)
   }
@@ -145,6 +162,8 @@ export default function Game() {
   const handleConfirmBet = () => {
     if (!activePlayer) return
     if (betSubmitting) return
+    perfReset()
+    perfMark('BET_user_click_confirm')
     const value = Number(betAmount)
     const result = validateBet(activePlayer, value, currentStake)
     if (!result.valid) {
@@ -152,6 +171,8 @@ export default function Game() {
       return
     }
     setBetSubmitting(true)
+    perfMark('BET_validation_done')
+    perfMeasure('BET_user_click_confirm', 'BET_validation_done', 'Turn validation')
     handleBet(value)
   }
 
