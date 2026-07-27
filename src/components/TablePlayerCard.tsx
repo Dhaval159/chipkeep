@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Player } from '../types/game'
 
 interface TablePlayerCardProps {
@@ -49,7 +50,7 @@ function getStatusClass(status: string, isWinner: boolean): string {
   return 'table-player-card__status--thinking'
 }
 
-export function TablePlayerCard({
+export const TablePlayerCard = memo(function TablePlayerCard({
   player,
   isDealer,
   isCurrentTurn,
@@ -96,4 +97,4 @@ export function TablePlayerCard({
       </span>
     </div>
   )
-}
+})
