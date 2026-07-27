@@ -25,7 +25,6 @@ import {
   Undo2,
   Plus,
   Wallet,
-  Wifi,
   WifiOff,
 } from 'lucide-react'
 

@@ -12,7 +12,7 @@ import type { Room, RoomPlayer } from '../types/multiplayer'
 import { db } from '../lib/firebase'
 import { UndoManager } from '../utils/undoManager'
 import { initialGameState } from '../context/GameContext'
-import { countActivePlayers, getNextActiveIndex, isEligibleForTurn, setActivePlayer } from '../utils/turn'
+import { getNextActiveIndex, isEligibleForTurn, setActivePlayer } from '../utils/turn'
 
 const DISCONNECT_TIMEOUT_MS = 60_000
 
