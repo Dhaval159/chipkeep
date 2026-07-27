@@ -40,6 +40,7 @@ export default function Game() {
   const [betAmount, setBetAmount] = useState('')
   const [betError, setBetError] = useState<string | null>(null)
   const [lastStake, setLastStake] = useState(0)
+  const [betSubmitting, setBetSubmitting] = useState(false)
 
   const stateLoadedRef = useRef(false)
 
@@ -202,54 +203,45 @@ export default function Game() {
   const handleSee = () => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
-    hostExecute(() => {
-      dispatchAction({ type: 'SEE_CARDS', playerId: activePlayer.id })
-      closeSheet()
-    })
+    dispatchAction({ type: 'SEE_CARDS', playerId: activePlayer.id })
+    closeSheet()
   }
 
   const handleBet = (amount: number) => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
-    hostExecute(() => {
-      dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
-      closeSheet()
-    })
+    dispatchAction({ type: 'BET', playerId: activePlayer.id, amount })
+    closeSheet()
+    setBetSubmitting(false)
   }
 
   const handlePack = () => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
-    hostExecute(() => {
-      setLastStake(currentStake)
-      dispatchAction({ type: 'PACK', playerId: activePlayer.id })
-      closeSheet()
-    })
+    setLastStake(currentStake)
+    dispatchAction({ type: 'PACK', playerId: activePlayer.id })
+    closeSheet()
   }
 
   const handleSideShowResult = (loserId: string) => {
     if (!activePlayer || !sideShowOpponent) return
     if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
-    hostExecute(() => {
-      setLastStake(currentStake)
-      dispatchAction({
-        type: 'SIDE_SHOW',
-        playerId: activePlayer.id,
-        opponentId: sideShowOpponent.id,
-        loserId,
-      })
-      closeDialog()
+    setLastStake(currentStake)
+    dispatchAction({
+      type: 'SIDE_SHOW',
+      playerId: activePlayer.id,
+      opponentId: sideShowOpponent.id,
+      loserId,
     })
+    closeDialog()
   }
 
   const handleShowResult = (winnerId: string) => {
     if (!activePlayer) return
     if (isMultiplayer && !isCurrentPlayerTurnRef.current) return
-    hostExecute(() => {
-      setLastStake(currentStake)
-      dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
-      closeDialog()
-    })
+    setLastStake(currentStake)
+    dispatchAction({ type: 'SHOW', playerId: activePlayer.id, winnerId })
+    closeDialog()
   }
 
   const handleUndo = () => {
@@ -263,12 +255,14 @@ export default function Game() {
 
   const handleConfirmBet = () => {
     if (!activePlayer) return
+    if (syncing || betSubmitting) return
     const value = Number(betAmount)
     const result = validateBet(activePlayer, value, currentStake)
     if (!result.valid) {
       setBetError(result.error)
       return
     }
+    setBetSubmitting(true)
     handleBet(value)
   }
 
@@ -676,8 +670,8 @@ export default function Game() {
               <Button variant="secondary" fullWidth onClick={() => setSheetView('menu')}>
                 Back
               </Button>
-              <Button variant="primary" fullWidth disabled={controlsDisabled} onClick={handleConfirmBet}>
-                Confirm Bet
+              <Button variant="primary" fullWidth disabled={controlsDisabled || betSubmitting} onClick={handleConfirmBet}>
+                {betSubmitting || syncing ? 'Submitting...' : 'Confirm Bet'}
               </Button>
             </div>
           </div>

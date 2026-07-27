@@ -13,6 +13,13 @@ export interface GameContextValue {
   undo: () => void
   canUndo: boolean
   isMultiplayer: boolean
+  multiplayer: {
+    roomId: string
+    playerId: string
+    hostId: string | null
+    isHost: boolean
+    isCurrentPlayerTurn: boolean
+  } | null
 }
 
 export const initialGameState: GameState = {

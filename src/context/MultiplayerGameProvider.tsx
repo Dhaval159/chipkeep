@@ -119,8 +119,10 @@ export function MultiplayerGameProvider({ children }: { children: ReactNode }) {
     dispatchAction: (action) => controller.dispatchAction(action),
     resetGame: () => controller.resetGame(),
     restoreGame: (state) => controller.restoreGame(state),
+    restoreGameState: (state) => controller.restoreGameState(state),
     undo: () => controller.undo(),
     canUndo: controller.canUndo,
+    isMultiplayer: true,
     multiplayer: multiplayerMetadata,
   }
 

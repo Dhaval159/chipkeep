@@ -118,6 +118,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       undo,
       canUndo: controller.canUndo,
       isMultiplayer: multiplayer,
+      multiplayer: null,
     }),
     [
       game,
