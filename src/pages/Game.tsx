@@ -394,7 +394,6 @@ export default function Game() {
           winner={winner}
           potWon={game.potWon}
           players={players}
-          currentStake={lastStake}
           handNumber={game.handNumber}
           onNextHand={handleStartHand}
           onReturn={() => setEndHandDismissed(true)}

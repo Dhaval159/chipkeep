@@ -156,6 +156,13 @@ export class MultiplayerGameController implements GameController {
     this.notify()
   }
 
+  restoreGameState(state: GameState): void {
+    this._state = state
+    this._isReady = true
+    this._error = null
+    this.notify()
+  }
+
   dispose(): void {
     if (this.roomUnsubscribe) {
       this.roomUnsubscribe()

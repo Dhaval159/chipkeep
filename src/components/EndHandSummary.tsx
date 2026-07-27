@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import type { Player } from '../types/game'
 import { timeline } from '../utils/timeline'
-import { PartyPopper, Trophy, Clock, Wallet, Users, Eye, ArrowRight, Sparkles } from 'lucide-react'
+import { Trophy, Clock, Wallet, Users, Eye, ArrowRight, Sparkles } from 'lucide-react'
 import { Avatar } from './ui/Avatar'
 import { Button } from './ui/Button'
 
@@ -9,7 +9,6 @@ interface EndHandSummaryProps {
   winner: Player | null
   potWon: number
   players: Player[]
-  currentStake: number
   handNumber: number
   onNextHand: () => void
   onReturn: () => void
@@ -38,7 +37,6 @@ export function EndHandSummary({
   winner,
   potWon,
   players,
-  currentStake,
   handNumber,
   onNextHand,
   onReturn,
